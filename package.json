@@ -3,9 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "canvas-sketch-util": "^1.8.0",
+    "d3": "^5.9.7",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
-    "react-scripts": "3.0.1"
+    "react-scripts": "3.0.1",
+    "react-spring": "^8.0.27",
+    "react-three-fiber": "^2.2.12",
+    "styled-components": "^4.3.2",
+    "three": "^0.106.2",
+    "topojson-client": "^3.0.0"
   },
   "scripts": {
     "start": "react-scripts start",

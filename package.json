@@ -11,7 +11,10 @@
     "react-spring": "^8.0.27",
     "react-three-fiber": "^2.2.12",
     "styled-components": "^4.3.2",
+    "svg-mesh-3d": "^1.1.0",
     "three": "^0.106.2",
+    "three-orbitcontrols": "^2.102.2",
+    "three-simplicial-complex": "^69.0.6",
     "topojson-client": "^3.0.0"
   },
   "scripts": {

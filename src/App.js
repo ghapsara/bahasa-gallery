@@ -5,9 +5,9 @@ import { Canvas, useRender, useThree, useUpdate } from 'react-three-fiber';
 import { useSpring, a, interpolate } from 'react-spring/three';
 import { useSpring as useDefaultSpring } from 'react-spring';
 import { animated } from 'react-spring';
-import { geoMercator, geoPath, scaleLinear, easeBounce } from 'd3';
+import { geoMercator, geoPath, scaleLinear, easeBounce, range } from 'd3';
 import { lerp, inverseLerp, mapRange } from 'canvas-sketch-util/math';
-import { noise1D, noise2D, noise3D } from 'canvas-sketch-util/random';
+import * as random from 'canvas-sketch-util/random';
 import { feature, mesh } from 'topojson-client';
 import { getPixelRatio, createCanvas } from './utlis';
 import fontJson from './font/noto-sans-regular.json';
@@ -83,10 +83,10 @@ function Title({ text, ...props }) {
 
 	return (
 		<group {...props} onClick={() => setHovered(!hovered)}>
-			<mesh scale={[9 * WIDTH_RATIO, 9, 9]}>
+			{/* <mesh scale={[9 * WIDTH_RATIO, 9, 9]}>
 				<meshBasicMaterial attach="material" color="black" opacity={0} />
 				<planeBufferGeometry attach="geometry" args={[1, 1, 1]} />
-			</mesh>
+			</mesh> */}
 			<mesh geometry={geometry}>
 				<meshBasicMaterial
 					attach="material"
@@ -193,19 +193,15 @@ function Maps({ map, cityMap, position, name, setCamera, setScroll }) {
 
 function Province({ top, camera, setCamera, setScroll }) {
 	// mannipulate scroll to navigate, not the position
-	const map = jawaTimur;
-	const provinceName = 'jawa-timur';
+	const map = bali;
+	const provinceName = 'bali';
 	const object = map.objects[provinceName];
-	const features = mesh(map, object);
 
-	const projection = geoMercator().fitSize([1, 1], features);
-	const path = geoPath(projection);
-
-	const l = object.geometries.length;
+	const l = object.geometries.length * 1.5;
 
 	return (
 		<a.group
-			position={top.interpolate([0, SCROLL_HEIGHT], [0, 13]).interpolate(t => [0, 0, t])}
+			position={top.interpolate([0, SCROLL_HEIGHT], [0, l]).interpolate(t => [0, 0, t])}
 		>
 			<a.group
 				position={camera.interpolate((x, y, z) => {
@@ -215,19 +211,19 @@ function Province({ top, camera, setCamera, setScroll }) {
 				{
 					object.geometries.map((d, i) => {
 						const { properties: { kabkot: name } } = d;
-						const p = mesh(map, d);
-						const [cx, cy] = path.centroid(p);
 
-						const x = lerp(-5, 5, cx);
-						const y = lerp(5, -5, cy);
-						const z = lerp(-10, 3, (i / l));
+						const n = random.onSphere(3);
+
+						const z = i * -1;
+
+						const position = [n[0], n[1], z];
 
 						return (
 							<Maps
 								key={i}
 								map={map}
 								cityMap={d}
-								position={[x, y, z]}
+								position={position}
 								name={name}
 								setCamera={setCamera}
 								setScroll={setScroll}
@@ -282,6 +278,37 @@ function CenterNavigation({ setCamera, setScroll }) {
 	)
 }
 
+function Geo() {
+	const map = jawaTimur;
+	const provinceName = 'jawa-timur';
+	const object = map.objects[provinceName];
+	const features = mesh(map, object);
+
+	const projection = geoMercator().fitSize([WIDTH, HEIGHT], features);
+	const path = geoPath(projection);
+
+	const l = object.geometries.length;
+
+	return (
+		<svg width={WIDTH} height={HEIGHT}>
+			{object.geometries.map((d, i) => {
+				const p = mesh(map, d);
+				const [cx, cy] = path.centroid(p);
+
+				const n = 1;
+				const x = lerp(0, WIDTH, n);
+				const y = lerp(0, HEIGHT, n);
+
+				return (<g key={i}>
+					<path d={path(p)} />
+
+					<circle cx={x} cy={y} r={5} fill="red" />
+				</g>)
+			})}
+		</svg>
+	)
+}
+
 function App() {
 	const [{ top, mouse }, set] = useSpring(() => ({ top: 0, mouse: [WIDTH / 2, 0] }));
 	const [{ scrollBarTop }, setScrollBarTop] = useDefaultSpring(() => ({ scrollBarTop: 0 }));
@@ -332,7 +359,7 @@ function App() {
 								setScroll={setScroll}
 							/>
 						</Canvas>
-						<CenterNavigation setCamera={setCamera} setScroll={setScroll} />
+						{/* <CenterNavigation setCamera={setCamera} setScroll={setScroll} /> */}
 					</div>
 				</div>
 			</animated.div>

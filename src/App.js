@@ -25,6 +25,7 @@ const BACKGROUND_COLOR = '#272727';
 const COLOR = '#FE9B96';
 const COLOR_1 = '#fff78f';
 const SCROLL_HEIGHT = 5 * HEIGHT;
+const SCROLL_VIEW_HEIGHT = SCROLL_HEIGHT - HEIGHT;
 
 const WIDTH_RATIO = WIDTH / HEIGHT;
 const HEIGHT_RATIO = HEIGHT / WIDTH;
@@ -97,7 +98,7 @@ function Title({ text, ...props }) {
 	);
 }
 
-function Maps({ map, cityMap, position, name, setCamera, setScroll, length }) {
+function Maps({ map, cityMap, position, name, zoomIn }) {
 	const sizeH = 1.3;
 	const canvas = useMemo(() => {
 		const H = WIDTH * sizeH;
@@ -162,13 +163,8 @@ function Maps({ map, cityMap, position, name, setCamera, setScroll, length }) {
 	}, [set]);
 
 	const onClick = useCallback(() => {
-
-		const z = position[2];
-		const a = mapRange(z - 3, 0, -1 * (length + 3), 0, SCROLL_HEIGHT - HEIGHT, true);
-
-		setCamera(position);
-		setScroll(a);
-	}, [setCamera, position, length, setScroll]);
+		zoomIn(position);
+	}, [position, zoomIn]);
 
 	return (
 		<a.mesh
@@ -184,14 +180,11 @@ function Maps({ map, cityMap, position, name, setCamera, setScroll, length }) {
 				<canvasTexture attach="map" image={canvas} />
 			</meshBasicMaterial>
 			<planeBufferGeometry attach="geometry" args={[1, sizeH, 1]} />
-			{/* <meshBasicMaterial attach="material" color={COLOR} />
-			<planeBufferGeometry attach="geometry" args={[1, 1, 1]} /> */}
 		</a.mesh>
 	)
 }
 
 function Province({ top, camera, setCamera, setScroll }) {
-	const ref = useRef(null);
 	// mannipulate scroll to navigate, not the position
 
 	// state for map positions: 
@@ -201,31 +194,26 @@ function Province({ top, camera, setCamera, setScroll }) {
 	const provinceName = 'bali';
 	const object = map.objects[provinceName];
 
-	const l = object.geometries.length;
+	const totalMaps = object.geometries.length;
+	const maxZoom = totalMaps + 3;
+	// random.setSeed(random.getRandomSeed());
 
-	const ps = [
-		[2.6972120326656737, 0.10299590988834555, 0],
-		[-1.800823102407262, -2.010885045065346, -1],
-		[-1.3437012021270387, 2.29540553028275, -2],
-		[2.900700745105882, 0.7024040966438084, -3],
-		[-0.7275335104353186, 2.4672009064480775, -4],
-		[0.8977237580630592, 0.5650573535354029, -5],
-		[0, 0, -6],
-		[-0.041597805056849596, -0.9673860277031271, -7],
-		[2.360748251692331, 0.9294259374874548, -8]
-	];
+	const positions = range(totalMaps).map((d, i) => {
+		const [x, y] = random.insideSphere(3);
+		const z = i * -1;
 
-	// const locs = ["Badung",
-	// "Bangli",
-	// "Buleleng",
-	// "Denpasar",
-	// "Gianyar",
-	// "Jembrana",
-	// "Karang Asem",
-	// "Klungkung",
-	// "Tabanan"];
+		return [x, y, z];
+	})
 
-	const topInterpolator = useCallback((top) => mapRange(top, 0, SCROLL_HEIGHT - HEIGHT, 0, l + 3), [l]);
+	const zoomIn = useCallback(position => {
+		const z = position[2];
+		const top = mapRange(z - 3, 0, -1 * maxZoom, 0, SCROLL_VIEW_HEIGHT);
+
+		setScroll(top);
+		setCamera(position);
+	}, [maxZoom, setScroll, setCamera]);
+
+	const topInterpolator = useCallback((top) => mapRange(top, 0, SCROLL_VIEW_HEIGHT, 0, maxZoom), [maxZoom]);
 
 	return (
 		<a.group
@@ -235,25 +223,21 @@ function Province({ top, camera, setCamera, setScroll }) {
 				return [-x, -y, z];
 			})}
 		>
-			{
-				object.geometries.map((d, i) => {
-					const { properties: { kabkot: name } } = d;
+			{object.geometries.map((d, i) => {
+				const { properties: { kabkot: name } } = d;
+				const position = positions[i];
 
-					let position = ps[i];
-
-					return (
-						<Maps
-							key={i}
-							map={map}
-							cityMap={d}
-							position={position}
-							name={name}
-							setCamera={setCamera}
-							setScroll={setScroll}
-							length={l}
-						/>
-					)
-				})
+				return (
+					<Maps
+						key={i}
+						name={name}
+						map={map}
+						cityMap={d}
+						position={position}
+						zoomIn={zoomIn}
+					/>
+				)
+			})
 			}
 		</a.group>
 	)
@@ -282,7 +266,7 @@ function Gallery({ top }) {
 function CenterNavigation({ setCamera, setScroll }) {
 	const onClick = useCallback(() => {
 		setScroll(0);
-		setCamera({ camera: [0, 0, 0] })
+		setCamera([0, 0, 0])
 	}, [setCamera, setScroll])
 
 	return (
@@ -421,7 +405,7 @@ function App() {
 								setScroll={setScroll}
 							/>
 						</Canvas>
-						{/* <CenterNavigation setCamera={setCamera} setScroll={setScroll} /> */}
+						<CenterNavigation setCamera={setCamera} setScroll={setScroll} />
 					</div>
 				</div>
 			</animated.div>

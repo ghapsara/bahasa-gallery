@@ -155,7 +155,6 @@ function Maps({ map, cityMap, position, name, setCamera, setScroll, length }) {
 
 	const onMouseOut = useCallback(() => {
 		set({ x: 0.5, y: 0.5, scale: 1 });
-		// setCamera({ camera: [0, 0] })
 	}, [set]);
 
 	const onMouseMove = useCallback(({ uv: { x, y } }) => {
@@ -163,11 +162,11 @@ function Maps({ map, cityMap, position, name, setCamera, setScroll, length }) {
 	}, [set]);
 
 	const onClick = useCallback(() => {
-		setCamera(position)
 
 		const z = position[2];
-		const a = mapRange(z, 0, -1 * length, 0, SCROLL_HEIGHT - HEIGHT, true);
+		const a = mapRange(z - 3, 0, -1 * (length + 3), 0, SCROLL_HEIGHT - HEIGHT, true);
 
+		setCamera(position);
 		setScroll(a);
 	}, [setCamera, position, length, setScroll]);
 
@@ -226,7 +225,7 @@ function Province({ top, camera, setCamera, setScroll }) {
 	// "Klungkung",
 	// "Tabanan"];
 
-	const topInterpolator = useCallback((top) => mapRange(top, 0, SCROLL_HEIGHT - HEIGHT, 0, l), [l]);
+	const topInterpolator = useCallback((top) => mapRange(top, 0, SCROLL_HEIGHT - HEIGHT, 0, l + 3), [l]);
 
 	return (
 		<a.group

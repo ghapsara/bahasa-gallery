@@ -97,7 +97,7 @@ function Title({ text, ...props }) {
 	);
 }
 
-function Maps({ map, cityMap, position, name, setCamera, setScroll }) {
+function Maps({ map, cityMap, position, name, setCamera, setScroll, length }) {
 	const sizeH = 1.3;
 	const canvas = useMemo(() => {
 		const H = WIDTH * sizeH;
@@ -129,7 +129,9 @@ function Maps({ map, cityMap, position, name, setCamera, setScroll }) {
 		context.strokeStyle = COLOR;
 		context.strokeRect(0, 0, w, h);
 
-		context.font = `bold 280px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
+		const fontSize = 0.15 * WIDTH;
+
+		context.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
 		context.textAlign = 'center';
 		context.textBaseline = 'top';
 		context.fillStyle = COLOR;
@@ -160,22 +162,20 @@ function Maps({ map, cityMap, position, name, setCamera, setScroll }) {
 		set({ x, y });
 	}, [set]);
 
-	// console.log(position[0])
-
 	const onClick = useCallback(() => {
-		console.log(name);
-		setCamera({ camera: position })
+		setCamera(position)
 
-		const a = mapRange(position[2], -10, 3, SCROLL_HEIGHT, 0, true);
+		const z = position[2];
+		const a = mapRange(z, 0, -1 * length, 0, SCROLL_HEIGHT - HEIGHT, true);
+
 		setScroll(a);
-
-	}, [name, setCamera, position, setScroll]);
+	}, [setCamera, position, length, setScroll]);
 
 	return (
 		<a.mesh
 			position={position}
 			scale={scale.interpolate(s => [s, s, s])}
-			rotation={interpolate([x, y], (x, y) => [lerp(-0.1, 0.1, y), lerp(-0.1, 0.1, x), 0])}
+			rotation={interpolate([x, y], (x, y) => [lerp(-0.1, 0.1, x), lerp(-0.1, 0.1, x), 0])}
 			onPointerOver={onMouseOver}
 			onPointerOut={onMouseOut}
 			onPointerMove={onMouseMove}
@@ -192,46 +192,70 @@ function Maps({ map, cityMap, position, name, setCamera, setScroll }) {
 }
 
 function Province({ top, camera, setCamera, setScroll }) {
+	const ref = useRef(null);
 	// mannipulate scroll to navigate, not the position
+
+	// state for map positions: 
+	// although the position is randomed, saving it in the state will be good option for user exxperience
+
 	const map = bali;
 	const provinceName = 'bali';
 	const object = map.objects[provinceName];
 
-	const l = object.geometries.length * 1.5;
+	const l = object.geometries.length;
+
+	const ps = [
+		[2.6972120326656737, 0.10299590988834555, 0],
+		[-1.800823102407262, -2.010885045065346, -1],
+		[-1.3437012021270387, 2.29540553028275, -2],
+		[2.900700745105882, 0.7024040966438084, -3],
+		[-0.7275335104353186, 2.4672009064480775, -4],
+		[0.8977237580630592, 0.5650573535354029, -5],
+		[0, 0, -6],
+		[-0.041597805056849596, -0.9673860277031271, -7],
+		[2.360748251692331, 0.9294259374874548, -8]
+	];
+
+	// const locs = ["Badung",
+	// "Bangli",
+	// "Buleleng",
+	// "Denpasar",
+	// "Gianyar",
+	// "Jembrana",
+	// "Karang Asem",
+	// "Klungkung",
+	// "Tabanan"];
+
+	const topInterpolator = useCallback((top) => mapRange(top, 0, SCROLL_HEIGHT - HEIGHT, 0, l), [l]);
 
 	return (
 		<a.group
-			position={top.interpolate([0, SCROLL_HEIGHT], [0, l]).interpolate(t => [0, 0, t])}
+			position={interpolate([top, camera], (t, cam) => {
+				const [x, y] = cam;
+				const z = topInterpolator(t);
+				return [-x, -y, z];
+			})}
 		>
-			<a.group
-				position={camera.interpolate((x, y, z) => {
-					return [x * -1, y * -1, 0];
-				})}
-			>
-				{
-					object.geometries.map((d, i) => {
-						const { properties: { kabkot: name } } = d;
+			{
+				object.geometries.map((d, i) => {
+					const { properties: { kabkot: name } } = d;
 
-						const n = random.onSphere(3);
+					let position = ps[i];
 
-						const z = i * -1;
-
-						const position = [n[0], n[1], z];
-
-						return (
-							<Maps
-								key={i}
-								map={map}
-								cityMap={d}
-								position={position}
-								name={name}
-								setCamera={setCamera}
-								setScroll={setScroll}
-							/>
-						)
-					})
-				}
-			</a.group>
+					return (
+						<Maps
+							key={i}
+							map={map}
+							cityMap={d}
+							position={position}
+							name={name}
+							setCamera={setCamera}
+							setScroll={setScroll}
+							length={l}
+						/>
+					)
+				})
+			}
 		</a.group>
 	)
 }
@@ -309,10 +333,45 @@ function Geo() {
 	)
 }
 
+function CanvasText({ top }) {
+	const w = 1.3;
+	const H = WIDTH * 1.3;
+	// console.log(WIDTH);
+	const fontSize = 0.15 * WIDTH;
+	const canvas = useMemo(() => {
+		const canvas = createCanvas(WIDTH, H);
+		const context = canvas.getContext('2d');
+
+		const width = WIDTH * pixelRatio;
+		const height = H * pixelRatio;
+
+		context.beginPath();
+		context.strokeStyle = COLOR;
+		context.lineWidth = 20;
+		context.strokeRect(0, 0, width, height);
+
+		context.font = `${fontSize}px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
+		context.textAlign = 'center';
+		context.textBaseline = 'top';
+		context.fillStyle = COLOR;
+		context.fillText('Penukal Abab Lematang Ilir', width * 0.5, height * 0.5);
+
+		return canvas;
+	}, [H, fontSize]);
+
+	return (
+		<a.mesh scale={interpolate(top, [0, SCROLL_HEIGHT], [2, 7]).interpolate(t => [t, t, t])}>
+			<meshBasicMaterial attach="material">
+				<canvasTexture attach="map" image={canvas} />
+			</meshBasicMaterial>
+			<planeBufferGeometry attach="geometry" args={[1, w, 0]} />
+		</a.mesh>
+	)
+}
+
 function App() {
-	const [{ top, mouse }, set] = useSpring(() => ({ top: 0, mouse: [WIDTH / 2, 0] }));
+	const [{ top, mouse, camera }, set] = useSpring(() => ({ top: 0, camera: [0, 0, 3], mouse: [WIDTH / 2, 0] }));
 	const [{ scrollBarTop }, setScrollBarTop] = useDefaultSpring(() => ({ scrollBarTop: 0 }));
-	const [{ camera }, setCamera] = useSpring(() => ({ camera: [0, 0, 3] }));
 
 	const onScroll = useCallback((e) => {
 		set({ top: e.target.scrollTop });
@@ -324,8 +383,12 @@ function App() {
 
 	const setScroll = useCallback((t) => {
 		set({ top: t });
-		setScrollBarTop({ scrollBarTop: t })
+		setScrollBarTop({ scrollBarTop: t });
 	}, [set, setScrollBarTop]);
+
+	const setCamera = useCallback((position) => {
+		set({ camera: position });
+	}, [set]);
 
 	return (
 		<div style={{

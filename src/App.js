@@ -2,9 +2,7 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import * as THREE from 'three';
 import * as OrbitControls from 'three-orbitcontrols';
 import { Canvas, useRender, useThree, useUpdate } from 'react-three-fiber';
-import { useSpring, a, interpolate } from 'react-spring/three';
-import { useSpring as useDefaultSpring } from 'react-spring';
-import { animated } from 'react-spring';
+import { useSpring, a, interpolate, config as configThreeSpring } from 'react-spring/three';
 import { geoMercator, geoPath, scaleLinear, easeBounce, range } from 'd3';
 import { lerp, inverseLerp, mapRange } from 'canvas-sketch-util/math';
 import * as random from 'canvas-sketch-util/random';
@@ -184,7 +182,7 @@ function Maps({ map, cityMap, position, name, zoomIn }) {
 	)
 }
 
-function Province({ top, camera, setCamera, setScroll }) {
+function Province({ top, xy, setXY, setScroll }) {
 	// mannipulate scroll to navigate, not the position
 
 	// state for map positions: 
@@ -195,30 +193,32 @@ function Province({ top, camera, setCamera, setScroll }) {
 	const object = map.objects[provinceName];
 
 	const totalMaps = object.geometries.length;
-	const maxZoom = totalMaps + 3;
+	const v = 2;
+	const maxZoom = ((totalMaps * v) + 3);
+
 	// random.setSeed(random.getRandomSeed());
 
 	const positions = range(totalMaps).map((d, i) => {
-		const [x, y] = random.insideSphere(3);
-		const z = i * -1;
+		const [x, y] = random.insideCircle(3);
+		const z = i * -v;
 
 		return [x, y, z];
 	})
 
 	const zoomIn = useCallback(position => {
-		const z = position[2];
+		const [x, y, z] = position;
 		const top = mapRange(z - 3, 0, -1 * maxZoom, 0, SCROLL_VIEW_HEIGHT);
 
 		setScroll(top);
-		setCamera(position);
-	}, [maxZoom, setScroll, setCamera]);
+		setXY([x, y]);
+	}, [maxZoom, setScroll, setXY]);
 
 	const topInterpolator = useCallback((top) => mapRange(top, 0, SCROLL_VIEW_HEIGHT, 0, maxZoom), [maxZoom]);
 
 	return (
 		<a.group
-			position={interpolate([top, camera], (t, cam) => {
-				const [x, y] = cam;
+			position={interpolate([top, xy], (t, xy) => {
+				const [x, y] = xy;
 				const z = topInterpolator(t);
 				return [-x, -y, z];
 			})}
@@ -263,11 +263,11 @@ function Gallery({ top }) {
 	)
 }
 
-function CenterNavigation({ setCamera, setScroll }) {
+function CenterNavigation({ setXY, setScroll }) {
 	const onClick = useCallback(() => {
 		setScroll(0);
-		setCamera([0, 0, 0])
-	}, [setCamera, setScroll])
+		setXY([0, 0]);
+	}, [setScroll, setXY])
 
 	return (
 		<div
@@ -353,24 +353,21 @@ function CanvasText({ top }) {
 }
 
 function App() {
-	const [{ top, mouse, camera }, set] = useSpring(() => ({ top: 0, camera: [0, 0, 3], mouse: [WIDTH / 2, 0] }));
-	const [{ scrollBarTop }, setScrollBarTop] = useDefaultSpring(() => ({ scrollBarTop: 0 }));
+	const [{ top, xy }, set] = useSpring(() => ({ top: 0, xy: [0, 0, 0] }));
+
+	const ref = useRef(null);
 
 	const onScroll = useCallback((e) => {
 		set({ top: e.target.scrollTop });
 	}, [set]);
 
-	const onMouseMove = useCallback(({ clientX: x, clientY: y }) => {
-		set({ mouse: [x, y] })
-	}, [set]);
-
 	const setScroll = useCallback((t) => {
 		set({ top: t });
-		setScrollBarTop({ scrollBarTop: t });
-	}, [set, setScrollBarTop]);
+		ref.current.scrollTo(0, t);
+	}, [set]);
 
-	const setCamera = useCallback((position) => {
-		set({ camera: position });
+	const setXY = useCallback((xy) => {
+		set({ xy });
 	}, [set]);
 
 	return (
@@ -378,8 +375,8 @@ function App() {
 			width: '100%',
 			height: '100vh',
 		}}>
-			<animated.div
-				scrollTop={scrollBarTop}
+			<div
+				ref={ref}
 				onScroll={onScroll}
 				style={{
 					overflow: 'auto',
@@ -394,21 +391,19 @@ function App() {
 						zIndex: 10,
 					}}
 				>
-					<div className="canvas-container" onMouseMove={onMouseMove}>
+					<div className="canvas-container">
 						<Canvas>
 							<Province
 								top={top}
-								mouse={mouse}
-								camera={camera}
-								setCamera={setCamera}
-								setMouse={set}
+								xy={xy}
+								setXY={setXY}
 								setScroll={setScroll}
 							/>
 						</Canvas>
-						<CenterNavigation setCamera={setCamera} setScroll={setScroll} />
+						<CenterNavigation setXY={setXY} setScroll={setScroll} />
 					</div>
 				</div>
-			</animated.div>
+			</div>
 		</div>
 	);
 }

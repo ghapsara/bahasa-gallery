@@ -1,9 +1,8 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import * as THREE from 'three';
-import * as OrbitControls from 'three-orbitcontrols';
 import { Canvas, useRender, useThree, useUpdate } from 'react-three-fiber';
-import { useSpring, a, interpolate, config as configThreeSpring } from 'react-spring/three';
-import { geoMercator, geoPath, scaleLinear, easeBounce, range } from 'd3';
+import { useSpring, a, interpolate } from 'react-spring/three';
+import { geoMercator, geoPath, range } from 'd3';
 import { lerp, inverseLerp, mapRange } from 'canvas-sketch-util/math';
 import * as random from 'canvas-sketch-util/random';
 import { feature, mesh } from 'topojson-client';
@@ -96,7 +95,7 @@ function Title({ text, ...props }) {
 	);
 }
 
-function Maps({ map, cityMap, position, name, zoomIn }) {
+function Maps({ map, cityMap, position, name, zoomIn, isActive, setIsActive, isInDetail, zoomOut }) {
 	const sizeH = 1.3;
 	const canvas = useMemo(() => {
 		const H = WIDTH * sizeH;
@@ -146,37 +145,55 @@ function Maps({ map, cityMap, position, name, zoomIn }) {
 		return canvas;
 	}, [cityMap, map, name]);
 
-	const [{ scale, x, y }, set] = useSpring(() => ({ scale: 1, x: 0.5, y: 0.5 }));
+	const [{ scale, rX, rY }, set] = useSpring(() => ({ scale: 1, rX: 0.5, rY: 0.5 }));
+	const { p, o } = useSpring({
+		from: {
+			p: position[1],
+			o: 1,
+		},
+		to: {
+			p: isInDetail ? (isActive ? position[1] : Math.sign(position[1]) * 10) : position[1],
+			o: isInDetail ? (isActive ? 1 : 0) : 1,
+		}
+	})
 
 	const onMouseOver = useCallback(() => {
-		set({ scale: 1.1 });
-	}, [set]);
+		set({ scale: isActive ? 1.3 : 1.1 });
+	}, [isActive, set]);
 
 	const onMouseOut = useCallback(() => {
-		set({ x: 0.5, y: 0.5, scale: 1 });
-	}, [set]);
+		set({ rX: 0.5, rY: 0.5, scale: isActive ? 1.3 : 1 });
+	}, [isActive, set]);
 
 	const onMouseMove = useCallback(({ uv: { x, y } }) => {
-		set({ x, y });
+		set({ rX: x, rY: y });
 	}, [set]);
 
 	const onClick = useCallback(() => {
-		zoomIn(position);
-	}, [position, zoomIn]);
+		if (!isInDetail) {
+			set({ scale: 1.3 });
+			setIsActive({ [name]: true })
+			zoomIn(position);
+		} else {
+			set({ scale: 1 });
+			setIsActive({ [name]: false })
+			zoomOut();
+		}
+	}, [isInDetail, name, position, set, setIsActive, zoomIn, zoomOut]);
 
 	return (
 		<a.mesh
-			position={position}
+			position={p.interpolate(t => [position[0], t, position[2]])}
 			scale={scale.interpolate(s => [s, s, s])}
-			rotation={interpolate([x, y], (x, y) => [lerp(-0.1, 0.1, x), lerp(-0.1, 0.1, x), 0])}
+			rotation={interpolate([rX, rY], (x, y) => [lerp(-0.02, 0.08, y), lerp(-0.1, 0.1, x), 0])}
 			onPointerOver={onMouseOver}
 			onPointerOut={onMouseOut}
 			onPointerMove={onMouseMove}
 			onClick={onClick}
 		>
-			<meshBasicMaterial attach="material">
+			<a.meshBasicMaterial attach="material" opacity={o}>
 				<canvasTexture attach="map" image={canvas} />
-			</meshBasicMaterial>
+			</a.meshBasicMaterial>
 			<planeBufferGeometry attach="geometry" args={[1, sizeH, 1]} />
 		</a.mesh>
 	)
@@ -188,22 +205,39 @@ function Province({ top, xy, setXY, setScroll }) {
 	// state for map positions: 
 	// although the position is randomed, saving it in the state will be good option for user exxperience
 
-	const map = bali;
-	const provinceName = 'bali';
+	const map = jawaTimur;
+	const provinceName = 'jawa-timur';
 	const object = map.objects[provinceName];
 
 	const totalMaps = object.geometries.length;
 	const v = 2;
 	const maxZoom = ((totalMaps * v) + 3);
 
-	// random.setSeed(random.getRandomSeed());
+	const positions = useMemo(() => {
+		return object.geometries.map((d, i) => {
+			const [x, y] = random.insideCircle(3);
+			const z = i * -v;
 
-	const positions = range(totalMaps).map((d, i) => {
-		const [x, y] = random.insideCircle(3);
-		const z = i * -v;
+			return [x, y, z];
+		});
+	}, [object.geometries]);
 
-		return [x, y, z];
-	})
+	const initialState = object.geometries.map(d => {
+		const { properties: { kabkot: name } } = d;
+
+		return {
+			name,
+			isActive: false
+		}
+	}).reduce((prev, curr) => {
+		return {
+			...prev,
+			[curr.name]: curr.isActive,
+		}
+	}, {});
+
+	const [isActive, setIsActive] = useState(initialState);
+	const isInDetail = Object.keys(isActive).some(k => isActive[k]);
 
 	const zoomIn = useCallback(position => {
 		const [x, y, z] = position;
@@ -212,6 +246,11 @@ function Province({ top, xy, setXY, setScroll }) {
 		setScroll(top);
 		setXY([x, y]);
 	}, [maxZoom, setScroll, setXY]);
+
+	const zoomOut = useCallback(() => {
+		// setScroll(0);
+		// setXY([0, 0]);
+	}, []);
 
 	const topInterpolator = useCallback((top) => mapRange(top, 0, SCROLL_VIEW_HEIGHT, 0, maxZoom), [maxZoom]);
 
@@ -235,6 +274,10 @@ function Province({ top, xy, setXY, setScroll }) {
 						cityMap={d}
 						position={position}
 						zoomIn={zoomIn}
+						zoomOut={zoomOut}
+						isActive={isActive[name]}
+						setIsActive={setIsActive}
+						isInDetail={isInDetail}
 					/>
 				)
 			})
@@ -265,18 +308,19 @@ function Gallery({ top }) {
 
 function CenterNavigation({ setXY, setScroll }) {
 	const onClick = useCallback(() => {
-		setScroll(0);
+		// setScroll(0);
 		setXY([0, 0]);
-	}, [setScroll, setXY])
+	}, [setXY])
 
 	return (
 		<div
 			style={{
 				position: 'fixed',
 				bottom: 10,
-				left: WIDTH / 2,
 				display: 'flex',
-				justifyContent: 'center'
+				justifyContent: 'center',
+				alignItems: 'center',
+				width: '100vw'
 			}}>
 			<button
 				onClick={onClick}
@@ -355,7 +399,7 @@ function CanvasText({ top }) {
 function App() {
 	const [{ top, xy }, set] = useSpring(() => ({ top: 0, xy: [0, 0, 0] }));
 
-	const ref = useRef(null);
+	const scrollRef = useRef(null);
 
 	const onScroll = useCallback((e) => {
 		set({ top: e.target.scrollTop });
@@ -363,7 +407,7 @@ function App() {
 
 	const setScroll = useCallback((t) => {
 		set({ top: t });
-		ref.current.scrollTo(0, t);
+		scrollRef.current.scrollTo(0, t);
 	}, [set]);
 
 	const setXY = useCallback((xy) => {
@@ -376,7 +420,7 @@ function App() {
 			height: '100vh',
 		}}>
 			<div
-				ref={ref}
+				ref={scrollRef}
 				onScroll={onScroll}
 				style={{
 					overflow: 'auto',

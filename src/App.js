@@ -133,30 +133,43 @@ function Maps({ map, cityMap, position, name, zoomIn, isActive, setIsActive, isI
 		context.textAlign = 'center';
 		context.textBaseline = 'top';
 		context.fillStyle = COLOR;
-		context.fillText(name, w * 0.5, h * 0.86);
+		// context.fillText(name, w * 0.5, h * 0.86);
 
 		context.translate(w * 0.1, h * 0.1);
 
-		context.beginPath();
-		path(m);
-		context.fillStyle = 'white';
-		context.fill();
+		// context.beginPath();
+		// path(m);
+		// context.fillStyle = 'white';
+		// context.fill();
 
 		return canvas;
-	}, [cityMap, map, name]);
+	}, [cityMap, map]);
 
 	const [{ scale, rX, rY }, set] = useSpring(() => ({ scale: 1, rX: 0.5, rY: 0.5 }));
 	const [x, y, z] = position;
-	const { pX, pY, o } = useSpring({
+
+	// random.setSeed(-z);
+	const positionTo = useMemo(() => {
+		const toTop = [x, 10, z];
+		const toRight = [10, y, z];
+		const toBottom = [x, -10, z];
+		const toLeft = [-10, y, z];
+
+		return random.pick([toTop, toRight, toBottom, toLeft]);
+	}, [x, y, z]);
+
+	const { pX, pY, o, p } = useSpring({
 		from: {
 			pX: x,
-			pY: position[1],
+			pY: y,
 			o: 1,
+			p: position,
 		},
 		to: {
 			pX: isInDetail ? (isActive ? x : Math.sign(x) * 10) : x,
-			pY: isInDetail ? (isActive ? position[1] : Math.sign(position[1]) * 10) : position[1],
+			pY: isInDetail ? (isActive ? y : Math.sign(y) * 10) : y,
 			o: isInDetail ? (isActive ? 1 : 0) : 1,
+			p: isInDetail ? (isActive ? position : positionTo) : position,
 		}
 	})
 
@@ -186,7 +199,7 @@ function Maps({ map, cityMap, position, name, zoomIn, isActive, setIsActive, isI
 
 	return (
 		<a.mesh
-			position={interpolate([pX, pY], (x, y) => [x, y, z])}
+			position={p}
 			scale={scale.interpolate(s => [s, s, s])}
 			rotation={interpolate([rX, rY], (x, y) => [lerp(-0.02, 0.08, y), lerp(-0.1, 0.1, x), 0])}
 			onPointerOver={onMouseOver}
@@ -194,7 +207,7 @@ function Maps({ map, cityMap, position, name, zoomIn, isActive, setIsActive, isI
 			onPointerMove={onMouseMove}
 			onClick={onClick}
 		>
-			<a.meshBasicMaterial attach="material" opacity={o}>
+			<a.meshBasicMaterial attach="material" opacity={1}>
 				<canvasTexture attach="map" image={canvas} />
 			</a.meshBasicMaterial>
 			<planeBufferGeometry attach="geometry" args={[1, sizeH, 1]} />

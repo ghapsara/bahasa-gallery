@@ -146,13 +146,16 @@ function Maps({ map, cityMap, position, name, zoomIn, isActive, setIsActive, isI
 	}, [cityMap, map, name]);
 
 	const [{ scale, rX, rY }, set] = useSpring(() => ({ scale: 1, rX: 0.5, rY: 0.5 }));
-	const { p, o } = useSpring({
+	const [x, y, z] = position;
+	const { pX, pY, o } = useSpring({
 		from: {
-			p: position[1],
+			pX: x,
+			pY: position[1],
 			o: 1,
 		},
 		to: {
-			p: isInDetail ? (isActive ? position[1] : Math.sign(position[1]) * 10) : position[1],
+			pX: isInDetail ? (isActive ? x : Math.sign(x) * 10) : x,
+			pY: isInDetail ? (isActive ? position[1] : Math.sign(position[1]) * 10) : position[1],
 			o: isInDetail ? (isActive ? 1 : 0) : 1,
 		}
 	})
@@ -183,7 +186,7 @@ function Maps({ map, cityMap, position, name, zoomIn, isActive, setIsActive, isI
 
 	return (
 		<a.mesh
-			position={p.interpolate(t => [position[0], t, position[2]])}
+			position={interpolate([pX, pY], (x, y) => [x, y, z])}
 			scale={scale.interpolate(s => [s, s, s])}
 			rotation={interpolate([rX, rY], (x, y) => [lerp(-0.02, 0.08, y), lerp(-0.1, 0.1, x), 0])}
 			onPointerOver={onMouseOver}
@@ -400,6 +403,8 @@ function App() {
 	const [{ top, xy }, set] = useSpring(() => ({ top: 0, xy: [0, 0, 0] }));
 
 	const scrollRef = useRef(null);
+
+	const [isInDetail, setIsInDetail] = useState(false);
 
 	const onScroll = useCallback((e) => {
 		set({ top: e.target.scrollTop });

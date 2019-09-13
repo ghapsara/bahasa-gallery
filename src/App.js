@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { Canvas, useRender, useThree, useUpdate } from 'react-three-fiber';
-import { useSpring, a, interpolate } from 'react-spring/three';
+import { useSpring, a, interpolate, config } from 'react-spring/three';
 import { geoMercator, geoPath, range } from 'd3';
 import { lerp, inverseLerp, mapRange } from 'canvas-sketch-util/math';
 import * as random from 'canvas-sketch-util/random';
@@ -170,7 +170,8 @@ function Maps({ map, cityMap, position, name, zoomIn, isActive, setIsActive, isI
 			pY: isInDetail ? (isActive ? y : Math.sign(y) * 10) : y,
 			o: isInDetail ? (isActive ? 1 : 0) : 1,
 			p: isInDetail ? (isActive ? position : positionTo) : position,
-		}
+		},
+		config: config.slow
 	})
 
 	const onMouseOver = useCallback(() => {
@@ -207,7 +208,7 @@ function Maps({ map, cityMap, position, name, zoomIn, isActive, setIsActive, isI
 			onPointerMove={onMouseMove}
 			onClick={onClick}
 		>
-			<a.meshBasicMaterial attach="material" opacity={1}>
+			<a.meshBasicMaterial attach="material" opacity={o}>
 				<canvasTexture attach="map" image={canvas} />
 			</a.meshBasicMaterial>
 			<planeBufferGeometry attach="geometry" args={[1, sizeH, 1]} />
@@ -221,8 +222,8 @@ function Province({ top, xy, setXY, setScroll }) {
 	// state for map positions: 
 	// although the position is randomed, saving it in the state will be good option for user exxperience
 
-	const map = jawaTimur;
-	const provinceName = 'jawa-timur';
+	const map = bali;
+	const provinceName = 'bali';
 	const object = map.objects[provinceName];
 
 	const totalMaps = object.geometries.length;
@@ -265,8 +266,8 @@ function Province({ top, xy, setXY, setScroll }) {
 
 	const zoomOut = useCallback(() => {
 		// setScroll(0);
-		// setXY([0, 0]);
-	}, []);
+		setXY([0, 0]);
+	}, [setXY]);
 
 	const topInterpolator = useCallback((top) => mapRange(top, 0, SCROLL_VIEW_HEIGHT, 0, maxZoom), [maxZoom]);
 
@@ -424,9 +425,8 @@ function App() {
 	}, [set]);
 
 	const setScroll = useCallback((t) => {
-		set({ top: t });
 		scrollRef.current.scrollTo(0, t);
-	}, [set]);
+	}, []);
 
 	const setXY = useCallback((xy) => {
 		set({ xy });

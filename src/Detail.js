@@ -66,16 +66,28 @@ function mapsPath(map, name) {
   });
 };
 
-function TextMask({ textList, y, ...styles }) {
+function TextMask({ textList, scrollHeight, y, ...props }) {
+  const fontSize = 160;
+  const scrollBottom = textList.length * fontSize;
+
   return (
     <>
       {textList.map((text, i) => {
-        const position = `translate(${CENTER_X}, ${(i + 1) * 180})`;
-
         return (
-          <text {...styles} transform={position} textAnchor="middle" fontSize={180} >
+          <animated.text
+            {...props}
+            key={i}
+            transform={y
+              .interpolate(t => {
+                const tY = ((i + 1) * fontSize) - t;
+                return `translate(${CENTER_X}, ${tY})`;
+              })
+            }
+            textAnchor="middle"
+            fontSize={fontSize}
+          >
             {text}
-          </text>
+          </animated.text>
         )
       })}
     </>
@@ -93,13 +105,16 @@ function Detail() {
   }, [set]);
 
 
-  const items = bahasaData['Kalimantan Tengah'].map(d => d.replace('Bahasa', '').trim())
+  const items = bahasaData['Nusa Tenggara Timur'].map(d => d.replace('Bahasa', '').trim())
 
   const itemsSpace = linspace(items.length);
 
   const distance = 200;
 
-  const scrollHeight = HEIGHT * 5;
+  const fontSize = 160;
+  const scrollBottom = (items.length + 1) * fontSize;
+
+  const scrollHeight = scrollBottom;
 
   // infinite scroll
   // scroll direction
@@ -116,11 +131,11 @@ function Detail() {
           <Svg>
             <mask id="mask-text-inside-maps">
               <rect x={0} y={0} width="100%" height="100%" fill="white" />
-              <TextMask textList={items} />
+              <TextMask scrollHeight={scrollHeight} y={scrollTop} textList={items} />
             </mask>
             <mask id="mask-text-outside-maps">
               <rect x={0} y={0} width="100%" height="100%" fill="white" />
-              <TextMask textList={items} />
+              <TextMask scrollHeight={scrollHeight} y={scrollTop} textList={items} />
             </mask>
             <mask id="mask-maps">
               <rect x={0} y={0} width="100%" height="100%" fill="white" />
@@ -131,7 +146,7 @@ function Detail() {
             <rect x="0" y="0" width="100%" height="100%" fill={BACKGROUND_COLOR} mask="url(#mask-text-outside-maps)" />
 
             <g mask="url(#mask-maps)">
-              <TextMask textList={items} fill={TEXT_COLOR} />
+              <TextMask scrollHeight={scrollHeight} y={scrollTop} textList={items} fill={TEXT_COLOR} />
             </g>
 
             <g mask="url(#mask-text-inside-maps)">

@@ -24,7 +24,8 @@ const COLOR = '#ff8000';
 
 const TEXT_COLOR = '#003732';
 
-const BACKGROUND_COLOR = '#df3a46';
+// const BACKGROUND_COLOR = '#df3a46';
+const BACKGROUND_COLOR = COLOR;
 
 const FONT_SIZE = 80;
 
@@ -56,7 +57,7 @@ function mapsPath(map, name) {
   return map.objects[name].geometries.map(d => {
     const p = mesh(map, d);
 
-    const projection = geoMercator().fitSize([WIDTH * 0.8, HEIGHT * 0.8], p);
+    const projection = geoMercator().fitSize([WIDTH, HEIGHT], p);
     const path = geoPath(projection);
 
     return path(p);
@@ -64,7 +65,7 @@ function mapsPath(map, name) {
 };
 
 function TextMask({ textList, scrollHeight, y, ...props }) {
-  const left = WIDTH * 0.1;
+  const left = WIDTH * 0.5;
 
   return (
     <animated.text
@@ -72,13 +73,41 @@ function TextMask({ textList, scrollHeight, y, ...props }) {
       fontSize={FONT_SIZE}
       alignmentBaseline="middle"
       dominantBaseline="middle"
-      y={y.interpolate(t => -t)}
+      y={y.interpolate(t => -t + (CENTER_Y - FONT_SIZE * 1.2))}
     >
       {textList.map(d =>
         <tspan key={d} x={left} dy="1.2em">{d}</tspan>
       )}
     </animated.text>
   );
+}
+
+function Title({ ...props }) {
+  return (
+    <>
+      <text
+        {...props}
+        fontSize={120}
+        transform={`translate(${CENTER_X}, ${HEIGHT * 0.2})`}
+        textAnchor="end"
+      >Denpasar
+      </text>
+      <text
+        {...props}
+        fontSize={180}
+        transform={`translate(${CENTER_X}, ${HEIGHT * 0.4})`}
+        textAnchor="end"
+      >3
+      </text>
+      <text
+        {...props}
+        fontSize={100}
+        transform={`translate(${CENTER_X}, ${HEIGHT * 0.5})`}
+        textAnchor="end"
+      >bahasa
+      </text>
+    </>
+  )
 }
 
 function Detail() {
@@ -94,13 +123,13 @@ function Detail() {
 
   const items = bahasaData['Kalimantan Timur'].map(d => d.replace('Bahasa', '').trim());
 
-  const scrollHeight = (items.length * (FONT_SIZE * 1.2)) + (FONT_SIZE * 1.2);
+  const scrollHeight = (items.length * (FONT_SIZE * 1.2)) + (HEIGHT - FONT_SIZE * 1.2);
   // infinite scroll
   // scroll direction
 
   const maps = mapsPath(bali, 'bali');
 
-  const mapsTransform = `translate(${0.1 * WIDTH}, ${0.1 * HEIGHT})`;
+  const mapsTransform = `translate(0, 0)`;
 
   return (
     <Container onScroll={onScroll}>
@@ -114,31 +143,32 @@ function Detail() {
             <mask id="mask-text-inside-maps">
               <rect x={0} y={0} width={WIDTH} height={HEIGHT} fill="white" />
               <TextMask scrollHeight={scrollHeight} y={scrollTop} textList={items} />
+
+              <Title />
             </mask>
             <mask id="mask-text-outside-maps">
               <rect x={0} y={0} width={WIDTH} height={HEIGHT} fill="white" />
               <TextMask scrollHeight={scrollHeight} y={scrollTop} textList={items} />
+
+              <Title />
             </mask>
             <mask id="mask-maps">
               <rect x={0} y={0} width={WIDTH} height={HEIGHT} fill="white" />
-              <path d={maps[1]} transform={mapsTransform} />
+              <path d={maps[3]} transform={mapsTransform} />
             </mask>
 
             <rect x={0} y={0} width={WIDTH} height={HEIGHT} fill={BACKGROUND_COLOR} mask="url(#mask-text-outside-maps)" />
 
             <g mask="url(#mask-maps)">
               <TextMask scrollHeight={scrollHeight} y={scrollTop} textList={items} fill={TEXT_COLOR} />
+
+              <Title fill={TEXT_COLOR} />
             </g>
 
             <g mask="url(#mask-text-inside-maps)">
-              <path d={maps[1]} fill={TEXT_COLOR} transform={mapsTransform} />
+              <path d={maps[3]} fill={TEXT_COLOR} transform={mapsTransform} />
             </g>
-            {/* <rect
-              x={0}
-              y={CENTER_Y - (FONT_SIZE * 0.5)}
-              width={WIDTH}
-              height={FONT_SIZE}
-            /> */}
+
           </svg>
         </SvgContainer>
       </ScrollWrapper>

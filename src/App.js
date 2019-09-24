@@ -1,19 +1,21 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import * as THREE from 'three';
-import { Canvas, useRender, useThree, useUpdate } from 'react-three-fiber';
+import { Canvas, useRender, useThree } from 'react-three-fiber';
 import { useSpring, a, interpolate, config } from 'react-spring/three';
+import { animated, useTransition as useTransitionJsx, useSpring as useSpringJsx, config as springConfigJsx, interpolate as interpolateJsx } from 'react-spring';
 import { geoMercator, geoPath, range } from 'd3';
-import { lerp, inverseLerp, mapRange } from 'canvas-sketch-util/math';
+import { lerp, mapRange, degToRad, lerpArray, linspace, wrap, clamp } from 'canvas-sketch-util/math';
 import * as random from 'canvas-sketch-util/random';
 import { feature, mesh } from 'topojson-client';
+import styled from 'styled-components';
 import { getPixelRatio, createCanvas } from './utlis';
-import fontJson from './font/noto-sans-regular.json';
+import fontJson from './font/helvetica.json';
 import bali from './maps/bali.json';
 import jawaBarat from './maps/jawa-barat.json';
 import jawaTimur from './maps/jawa-timur.json';
 import indonesiaMap from './maps/indonesia.json';
-import svgMesh3d from 'svg-mesh-3d';
-const createGeometry = require('three-simplicial-complex')(THREE);
+import Detail from './Detail';
+import Scroll from './Scroll';
 
 const pixelRatio = getPixelRatio();
 const WIDTH = window.innerWidth;
@@ -217,11 +219,6 @@ function Maps({ map, cityMap, position, name, zoomIn, isActive, setIsActive, isI
 }
 
 function Province({ top, xy, setXY, setScroll }) {
-	// mannipulate scroll to navigate, not the position
-
-	// state for map positions: 
-	// although the position is randomed, saving it in the state will be good option for user exxperience
-
 	const map = bali;
 	const provinceName = 'bali';
 	const object = map.objects[provinceName];
@@ -377,7 +374,7 @@ function Geo() {
 	)
 }
 
-function CanvasText({ top }) {
+function CanvasText() {
 	const w = 1.3;
 	const H = WIDTH * 1.3;
 	// console.log(WIDTH);
@@ -398,20 +395,51 @@ function CanvasText({ top }) {
 		context.textAlign = 'center';
 		context.textBaseline = 'top';
 		context.fillStyle = COLOR;
-		context.fillText('Penukal Abab Lematang Ilir', width * 0.5, height * 0.5);
+		context.fillText('Maps', width * 0.5, height * 0.5);
 
 		return canvas;
 	}, [H, fontSize]);
 
+	const { canvasPosition } = useSpring({
+		from: {
+			canvasPosition: [0, 0, 0]
+		},
+		to: {
+			canvasPosition: [-3.5, 0, 0]
+		}
+	});
+
 	return (
-		<a.mesh scale={interpolate(top, [0, SCROLL_HEIGHT], [2, 7]).interpolate(t => [t, t, t])}>
-			<meshBasicMaterial attach="material">
-				<canvasTexture attach="map" image={canvas} />
-			</meshBasicMaterial>
-			<planeBufferGeometry attach="geometry" args={[1, w, 0]} />
-		</a.mesh>
+		<a.group>
+			<a.mesh position={canvasPosition} scale={[3, 3, 3]}>
+				<meshBasicMaterial attach="material">
+					<canvasTexture attach="map" image={canvas} />
+				</meshBasicMaterial>
+				<planeBufferGeometry attach="geometry" args={[1, w, 0]} />
+			</a.mesh>
+		</a.group>
 	)
 }
+
+const Bahasa = styled.div`
+	padding: 10px 5px;
+	font-size: 100px;
+`;
+
+const Animated = styled(animated.div)`
+	padding: 10px 5px;
+	font-size: 120px;
+`
+
+function degToXY(deg) {
+	const rad = degToRad(deg);
+
+	return {
+		x: Math.cos(rad),
+		y: Math.sin(rad),
+	}
+}
+
 
 function App() {
 	const [{ top, xy }, set] = useSpring(() => ({ top: 0, xy: [0, 0, 0] }));
@@ -437,7 +465,7 @@ function App() {
 			width: '100%',
 			height: '100vh',
 		}}>
-			<div
+			{/* <div
 				ref={scrollRef}
 				onScroll={onScroll}
 				style={{
@@ -465,7 +493,8 @@ function App() {
 						<CenterNavigation setXY={setXY} setScroll={setScroll} />
 					</div>
 				</div>
-			</div>
+			</div> */}
+			<Detail />
 		</div>
 	);
 }

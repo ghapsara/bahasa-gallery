@@ -1,9 +1,7 @@
-import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import styled from 'styled-components';
-import { useSpring, interpolate, config, animated } from 'react-spring';
-import { lerp, mapRange, degToRad, radToDeg, linspace } from 'canvas-sketch-util/math';
-import * as random from 'canvas-sketch-util/random';
-import { range, geoMercator, geoPath } from 'd3';
+import { useSpring, config, animated } from 'react-spring';
+import { geoMercator, geoPath } from 'd3';
 import { mesh } from 'topojson-client';
 import bahasa from './data/provinsi-bahasa.json';
 import bali from './maps/bali.json';
@@ -176,5 +174,4 @@ function Detail() {
   )
 }
 
-
-export default Detail
+export default Detail;

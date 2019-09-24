@@ -1,101 +1,22 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import * as THREE from 'three';
-import { Canvas, useRender, useThree } from 'react-three-fiber';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
+import { Canvas } from 'react-three-fiber';
 import { useSpring, a, interpolate, config } from 'react-spring/three';
-import { animated, useTransition as useTransitionJsx, useSpring as useSpringJsx, config as springConfigJsx, interpolate as interpolateJsx } from 'react-spring';
-import { geoMercator, geoPath, range } from 'd3';
-import { lerp, mapRange, degToRad, lerpArray, linspace, wrap, clamp } from 'canvas-sketch-util/math';
+import { geoMercator, geoPath } from 'd3';
+import { lerp, mapRange } from 'canvas-sketch-util/math';
 import * as random from 'canvas-sketch-util/random';
-import { feature, mesh } from 'topojson-client';
-import styled from 'styled-components';
+import { mesh } from 'topojson-client';
 import { getPixelRatio, createCanvas } from './utlis';
-import fontJson from './font/helvetica.json';
 import bali from './maps/bali.json';
-import jawaBarat from './maps/jawa-barat.json';
-import jawaTimur from './maps/jawa-timur.json';
-import indonesiaMap from './maps/indonesia.json';
-import Detail from './Detail';
-import Scroll from './Scroll';
 
 const pixelRatio = getPixelRatio();
+const BACKGROUND_COLOR = '#423c4a';
+const COLOR = '#FE9B96';
+
 const WIDTH = window.innerWidth;
 const HEIGHT = window.innerHeight;
-const BACKGROUND_COLOR = '#272727';
-const COLOR = '#FE9B96';
-const COLOR_1 = '#fff78f';
+
 const SCROLL_HEIGHT = 5 * HEIGHT;
 const SCROLL_VIEW_HEIGHT = SCROLL_HEIGHT - HEIGHT;
-
-const WIDTH_RATIO = WIDTH / HEIGHT;
-const HEIGHT_RATIO = HEIGHT / WIDTH;
-
-const CENTER_X = WIDTH / 2;
-const CENTER_Y = HEIGHT / 2;
-
-const FONT = new THREE.FontLoader().parse(fontJson);
-
-function drawTextAlongArc(context, str, centerX, centerY, radius, angle) {
-	var len = str.length, s;
-	context.save();
-	context.translate(centerX, centerY);
-	context.rotate(-1 * angle / 2);
-	context.rotate(-1 * (angle / len) / 2);
-	for (var n = 0; n < len; n++) {
-		context.rotate(angle / len);
-		context.save();
-		context.translate(0, -1 * radius);
-		s = str[n];
-		context.fillText(s, 0, 0);
-		context.restore();
-	}
-	context.restore();
-}
-
-function mapsPath(map, name) {
-	const features = mesh(map, map.objects[name]);
-
-	const projection = geoMercator().fitSize([WIDTH, HEIGHT], features);
-	const path = geoPath(projection)
-
-	return map.objects[name].geometries.map(d => {
-		const p = mesh(map, d);
-		return path(p);
-	});
-};
-
-function mapsPathFeature(map, name) {
-	const features = feature(map, map.objects[name]);
-
-	const projection = geoMercator().fitSize([WIDTH, HEIGHT], features);
-	const path = geoPath().projection(projection);
-
-	return path(features);
-}
-
-function Title({ text, ...props }) {
-	const [hovered, setHovered] = useState(false);
-
-	const geometry = new THREE.TextGeometry(text, {
-		font: FONT,
-		size: 1,
-		height: 0
-	}).center();
-
-	return (
-		<group {...props} onClick={() => setHovered(!hovered)}>
-			{/* <mesh scale={[9 * WIDTH_RATIO, 9, 9]}>
-				<meshBasicMaterial attach="material" color="black" opacity={0} />
-				<planeBufferGeometry attach="geometry" args={[1, 1, 1]} />
-			</mesh> */}
-			<mesh geometry={geometry}>
-				<meshBasicMaterial
-					attach="material"
-					color={COLOR}
-				/>
-			</mesh>
-		</group>
-	);
-}
 
 function Maps({ map, cityMap, position, name, zoomIn, isActive, setIsActive, isInDetail, zoomOut }) {
 	const sizeH = 1.3;
@@ -117,14 +38,6 @@ function Maps({ map, cityMap, position, name, zoomIn, isActive, setIsActive, isI
 		const path = geoPath(projection, context)
 
 		context.beginPath();
-		context.fillStyle = COLOR;
-		context.fillRect(0, 0, w, h);
-
-		context.beginPath();
-		context.fillStyle = 'white';
-		context.fillRect(0, h * 0.8, w, 0.2 * h);
-
-		context.beginPath();
 		context.lineWidth = 20;
 		context.strokeStyle = COLOR;
 		context.strokeRect(0, 0, w, h);
@@ -135,41 +48,38 @@ function Maps({ map, cityMap, position, name, zoomIn, isActive, setIsActive, isI
 		context.textAlign = 'center';
 		context.textBaseline = 'top';
 		context.fillStyle = COLOR;
-		// context.fillText(name, w * 0.5, h * 0.86);
+		context.fillText(name, w * 0.5, h * 0.86);
 
 		context.translate(w * 0.1, h * 0.1);
 
-		// context.beginPath();
-		// path(m);
-		// context.fillStyle = 'white';
-		// context.fill();
+		context.beginPath();
+		path(m);
+		context.fillStyle = COLOR;
+		context.fill();
 
 		return canvas;
-	}, [cityMap, map]);
+	}, [cityMap, map, name]);
 
-	const [{ scale, rX, rY }, set] = useSpring(() => ({ scale: 1, rX: 0.5, rY: 0.5 }));
-	const [x, y, z] = position;
-
-	// random.setSeed(-z);
 	const positionTo = useMemo(() => {
-		const toTop = [x, 10, z];
-		const toRight = [10, y, z];
-		const toBottom = [x, -10, z];
-		const toLeft = [-10, y, z];
+		const [x, y, z] = position;
+
+		const s = 20;
+		const toTop = [x, s, z];
+		const toRight = [s, y, z];
+		const toBottom = [x, -s, z];
+		const toLeft = [-s, y, z];
 
 		return random.pick([toTop, toRight, toBottom, toLeft]);
-	}, [x, y, z]);
+	}, [position]);
 
-	const { pX, pY, o, p } = useSpring({
+	const [{ scale, rX, rY }, set] = useSpring(() => ({ scale: 1, rX: 0.5, rY: 0.5 }));
+
+	const { o, p } = useSpring({
 		from: {
-			pX: x,
-			pY: y,
 			o: 1,
 			p: position,
 		},
 		to: {
-			pX: isInDetail ? (isActive ? x : Math.sign(x) * 10) : x,
-			pY: isInDetail ? (isActive ? y : Math.sign(y) * 10) : y,
 			o: isInDetail ? (isActive ? 1 : 0) : 1,
 			p: isInDetail ? (isActive ? position : positionTo) : position,
 		},
@@ -236,19 +146,21 @@ function Province({ top, xy, setXY, setScroll }) {
 		});
 	}, [object.geometries]);
 
-	const initialState = object.geometries.map(d => {
-		const { properties: { kabkot: name } } = d;
+	const initialState = useMemo(() => {
+		return object.geometries.map(d => {
+			const { properties: { kabkot: name } } = d;
 
-		return {
-			name,
-			isActive: false
-		}
-	}).reduce((prev, curr) => {
-		return {
-			...prev,
-			[curr.name]: curr.isActive,
-		}
-	}, {});
+			return {
+				name,
+				isActive: false
+			}
+		}).reduce((prev, curr) => {
+			return {
+				...prev,
+				[curr.name]: curr.isActive,
+			}
+		}, {})
+	}, [object.geometries]);
 
 	const [isActive, setIsActive] = useState(initialState);
 	const isInDetail = Object.keys(isActive).some(k => isActive[k]);
@@ -262,7 +174,6 @@ function Province({ top, xy, setXY, setScroll }) {
 	}, [maxZoom, setScroll, setXY]);
 
 	const zoomOut = useCallback(() => {
-		// setScroll(0);
 		setXY([0, 0]);
 	}, [setXY]);
 
@@ -300,153 +211,10 @@ function Province({ top, xy, setXY, setScroll }) {
 	)
 }
 
-function Gallery({ top }) {
-	const locs = ['bali', 'papua barat', 'kepulauan riau'];
-
-	const gap = 20;
-	const lastZ = locs.length * gap;
-
-	return (
-		<a.group
-			position={top.interpolate([0, SCROLL_HEIGHT], [0, lastZ]).interpolate(t => [0, 0, t])}
-		>
-			{locs.map((l, i) => {
-				const z = i * gap * -1;
-				return (
-					<Title key={l} text={l} position={[0, 0, z]} />
-				);
-			})}
-		</a.group>
-	)
-}
-
-function CenterNavigation({ setXY, setScroll }) {
-	const onClick = useCallback(() => {
-		// setScroll(0);
-		setXY([0, 0]);
-	}, [setXY])
-
-	return (
-		<div
-			style={{
-				position: 'fixed',
-				bottom: 10,
-				display: 'flex',
-				justifyContent: 'center',
-				alignItems: 'center',
-				width: '100vw'
-			}}>
-			<button
-				onClick={onClick}
-			>center</button>
-		</div>
-	)
-}
-
-function Geo() {
-	const map = jawaTimur;
-	const provinceName = 'jawa-timur';
-	const object = map.objects[provinceName];
-	const features = mesh(map, object);
-
-	const projection = geoMercator().fitSize([WIDTH, HEIGHT], features);
-	const path = geoPath(projection);
-
-	const l = object.geometries.length;
-
-	return (
-		<svg width={WIDTH} height={HEIGHT}>
-			{object.geometries.map((d, i) => {
-				const p = mesh(map, d);
-				const [cx, cy] = path.centroid(p);
-
-				const n = 1;
-				const x = lerp(0, WIDTH, n);
-				const y = lerp(0, HEIGHT, n);
-
-				return (<g key={i}>
-					<path d={path(p)} />
-
-					<circle cx={x} cy={y} r={5} fill="red" />
-				</g>)
-			})}
-		</svg>
-	)
-}
-
-function CanvasText() {
-	const w = 1.3;
-	const H = WIDTH * 1.3;
-	// console.log(WIDTH);
-	const fontSize = 0.15 * WIDTH;
-	const canvas = useMemo(() => {
-		const canvas = createCanvas(WIDTH, H);
-		const context = canvas.getContext('2d');
-
-		const width = WIDTH * pixelRatio;
-		const height = H * pixelRatio;
-
-		context.beginPath();
-		context.strokeStyle = COLOR;
-		context.lineWidth = 20;
-		context.strokeRect(0, 0, width, height);
-
-		context.font = `${fontSize}px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
-		context.textAlign = 'center';
-		context.textBaseline = 'top';
-		context.fillStyle = COLOR;
-		context.fillText('Maps', width * 0.5, height * 0.5);
-
-		return canvas;
-	}, [H, fontSize]);
-
-	const { canvasPosition } = useSpring({
-		from: {
-			canvasPosition: [0, 0, 0]
-		},
-		to: {
-			canvasPosition: [-3.5, 0, 0]
-		}
-	});
-
-	return (
-		<a.group>
-			<a.mesh position={canvasPosition} scale={[3, 3, 3]}>
-				<meshBasicMaterial attach="material">
-					<canvasTexture attach="map" image={canvas} />
-				</meshBasicMaterial>
-				<planeBufferGeometry attach="geometry" args={[1, w, 0]} />
-			</a.mesh>
-		</a.group>
-	)
-}
-
-const Bahasa = styled.div`
-	padding: 10px 5px;
-	font-size: 100px;
-`;
-
-const Animated = styled(animated.div)`
-	padding: 10px 5px;
-	font-size: 120px;
-`
-
-function degToXY(deg) {
-	const rad = degToRad(deg);
-
-	return {
-		x: Math.cos(rad),
-		y: Math.sin(rad),
-	}
-}
-
-
 function App() {
 	const [{ top, xy }, set] = useSpring(() => ({ top: 0, xy: [0, 0, 0] }));
 
 	const scrollRef = useRef(null);
-
-	const [isInDetail, setIsInDetail] = useState(false);
 
 	const onScroll = useCallback((e) => {
 		set({ top: e.target.scrollTop });
@@ -465,7 +233,7 @@ function App() {
 			width: '100%',
 			height: '100vh',
 		}}>
-			{/* <div
+			<div
 				ref={scrollRef}
 				onScroll={onScroll}
 				style={{
@@ -482,7 +250,9 @@ function App() {
 					}}
 				>
 					<div className="canvas-container">
-						<Canvas>
+						<Canvas style={{
+							backgroundColor: BACKGROUND_COLOR
+						}}>
 							<Province
 								top={top}
 								xy={xy}
@@ -490,11 +260,9 @@ function App() {
 								setScroll={setScroll}
 							/>
 						</Canvas>
-						<CenterNavigation setXY={setXY} setScroll={setScroll} />
 					</div>
 				</div>
-			</div> */}
-			<Detail />
+			</div>
 		</div>
 	);
 }

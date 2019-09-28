@@ -1,59 +1,78 @@
-import React, { useMemo } from 'react';
-import { createCanvas, getPixelRatio } from "./utlis";
+import React, { useMemo, useRef } from 'react';
+import { extend, useThree, useRender } from 'react-three-fiber';
 import * as THREE from 'three';
+import { MaskShader } from './shaders';
+import { createCanvas, getPixelRatio } from "./utlis";
 import fontJson from './font/helvetica.json';
 
 const WIDTH = window.innerWidth;
 const COLOR = '#ff8000';
 
-const FONT = new THREE.FontLoader().parse(fontJson);
-
 function DetailCanvas() {
-  const w = 1.3;
+  const canvas1 = useMemo(() => {
+    const canvas = createCanvas(WIDTH, WIDTH);
+    const pixelRatio = getPixelRatio();
+    const w = WIDTH * pixelRatio;
 
-  const canvas = useMemo(() => {
-    const H = WIDTH * w;
-
-    const canvas = createCanvas(WIDTH, H);
     const context = canvas.getContext('2d');
+
+    const halfW = w * 0.5;
+
+    context.beginPath();
+    context.fillStyle = 'white';
+    context.fillRect(0, 0, w, w);
+
+    context.beginPath();
+    context.fillStyle = 'red';
+    context.fillRect(halfW * 0.5, halfW * 0.5, halfW, halfW);
+
+    context.beginPath();
+    context.lineWidth = 20;
+    context.strokeStyle = 'red';
+    context.strokeRect(0, 0, w, w);
+
+    return canvas;
+  }, []);
+
+  const canvas2 = useMemo(() => {
+    const canvas = createCanvas(WIDTH, WIDTH);
+    const pixelRatio = getPixelRatio();
+    const w = WIDTH * pixelRatio;
+
+    const context = canvas.getContext('2d');
+
+    context.beginPath();
+    context.lineWidth = 20;
+    context.strokeStyle = 'white';
+    context.strokeRect(0, 0, w, w);
+
 
     const fontSize = 0.15 * WIDTH;
 
-    const pixelRatio = getPixelRatio();
-
-    const width = WIDTH * pixelRatio;
-    const height = H * pixelRatio;
-
-    context.beginPath();
-    context.strokeStyle = COLOR;
-    context.lineWidth = 20;
-    context.strokeRect(0, 0, width, height);
-
-    context.font = `${fontSize}px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
+    context.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
     context.textAlign = 'center';
     context.textBaseline = 'top';
     context.fillStyle = COLOR;
-    context.fillText('Maps', width * 0.5, height * 0.5);
+    context.fillText('this should be long', w * 0.6, w * 0.5);
 
     return canvas;
-  }, [w]);
+  }, []);
 
-  const textGeometry = new THREE.TextGeometry('text', {
-    font: FONT,
-    size: 1,
-    height: 0
-  }).center();
+  const map = new THREE.CanvasTexture(canvas1);
+  const mask = new THREE.CanvasTexture(canvas2);
 
   return (
     <>
-      <mesh scale={[3, 3, 3]}>
-        <meshBasicMaterial attach="material">
-          <canvasTexture attach="map" image={canvas} />
-        </meshBasicMaterial>
-        <planeBufferGeometry attach="geometry" args={[1, w, 0]} />
-      </mesh>
-      <mesh geometry={textGeometry}>
-        <meshBasicMaterial attach="material" color={COLOR} />
+      <mesh>
+        <planeGeometry attach="geometry" args={[5, 5, 5]} />
+        <shaderMaterial
+          attach="material"
+          args={[MaskShader]}
+          uniforms-map-value={map}
+          uniforms-mask-value={mask}
+          blending={THREE.AdditiveBlending}
+          transparent
+        />
       </mesh>
     </>
   )

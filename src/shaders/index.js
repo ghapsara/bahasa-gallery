@@ -28,23 +28,32 @@ export const ColorShader = {
 export const MaskShader = {
   uniforms: {
     map: { value: null },
-    mask: { value: null },
+    backgroundMask: { value: null },
+    textMask: { value: null },
+    top: { value: 0.0 }
   },
   fragmentShader: `
     varying vec4 textureCoord;
 
     uniform sampler2D map;
-    uniform sampler2D mask;
+    uniform sampler2D backgroundMask;
+    uniform sampler2D textMask;
+    uniform float top;
+
+    uniform sampler2D map1;
 
     void main() {
       float x = (textureCoord.x / textureCoord.w);
       float y = (textureCoord.y / textureCoord.w);
+
       vec2 mapPosition = vec2(x, y);
+      vec2 maskTextPosition = vec2(x, y - top);
 
       vec3 mapTexture = texture2D(map, mapPosition).xyz;
-      vec3 maskTexture = texture2D(mask, mapPosition).xyz;
+      vec3 backgroundMaskTexture = texture2D(backgroundMask, mapPosition).xyz;
+      vec3 textMaskTexture = texture2D(textMask, maskTextPosition).xyz;
 
-      gl_FragColor = vec4(mapTexture, maskTexture.r);
+      gl_FragColor = vec4(mix(backgroundMaskTexture, mapTexture, textMaskTexture), 1.0);
     }
   `,
   vertexShader: `

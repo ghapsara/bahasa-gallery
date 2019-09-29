@@ -1,15 +1,19 @@
 import React, { useMemo, useRef } from 'react';
 import { extend, useThree, useRender } from 'react-three-fiber';
+import { a } from 'react-spring/three';
+import { mapRange, lerp } from 'canvas-sketch-util/math';
 import * as THREE from 'three';
 import { MaskShader } from './shaders';
 import { createCanvas, getPixelRatio } from "./utlis";
 import fontJson from './font/helvetica.json';
 
 const WIDTH = window.innerWidth;
+const HEIGHT = window.innerHeight * 5;
 const COLOR = '#ff8000';
+const BACKGROUND_COLOR = '#423c4a';
 
-function DetailCanvas() {
-  const canvas1 = useMemo(() => {
+function DetailCanvas({ top }) {
+  const map = useMemo(() => {
     const canvas = createCanvas(WIDTH, WIDTH);
     const pixelRatio = getPixelRatio();
     const w = WIDTH * pixelRatio;
@@ -26,15 +30,10 @@ function DetailCanvas() {
     context.fillStyle = 'red';
     context.fillRect(halfW * 0.5, halfW * 0.5, halfW, halfW);
 
-    context.beginPath();
-    context.lineWidth = 20;
-    context.strokeStyle = 'red';
-    context.strokeRect(0, 0, w, w);
-
-    return canvas;
+    return new THREE.CanvasTexture(canvas);
   }, []);
 
-  const canvas2 = useMemo(() => {
+  const mask = useMemo(() => {
     const canvas = createCanvas(WIDTH, WIDTH);
     const pixelRatio = getPixelRatio();
     const w = WIDTH * pixelRatio;
@@ -42,10 +41,18 @@ function DetailCanvas() {
     const context = canvas.getContext('2d');
 
     context.beginPath();
-    context.lineWidth = 20;
-    context.strokeStyle = 'white';
-    context.strokeRect(0, 0, w, w);
+    context.fillStyle = BACKGROUND_COLOR;
+    context.fillRect(0, 0, w, w);
 
+    return new THREE.CanvasTexture(canvas);
+  }, []);
+
+  const text = useMemo(() => {
+    const canvas = createCanvas(WIDTH, WIDTH);
+    const pixelRatio = getPixelRatio();
+    const w = WIDTH * pixelRatio;
+
+    const context = canvas.getContext('2d');
 
     const fontSize = 0.15 * WIDTH;
 
@@ -55,23 +62,22 @@ function DetailCanvas() {
     context.fillStyle = COLOR;
     context.fillText('this should be long', w * 0.6, w * 0.5);
 
-    return canvas;
+    return new THREE.CanvasTexture(canvas);
   }, []);
-
-  const map = new THREE.CanvasTexture(canvas1);
-  const mask = new THREE.CanvasTexture(canvas2);
 
   return (
     <>
       <mesh>
         <planeGeometry attach="geometry" args={[5, 5, 5]} />
-        <shaderMaterial
+        <a.shaderMaterial
           attach="material"
           args={[MaskShader]}
           uniforms-map-value={map}
-          uniforms-mask-value={mask}
+          uniforms-backgroundMask-value={mask}
+          uniforms-textMask-value={text}
+          uniforms-top-value={top.interpolate([0, HEIGHT], [0.0, 1.0])}
           blending={THREE.AdditiveBlending}
-          transparent
+        // transparent
         />
       </mesh>
     </>

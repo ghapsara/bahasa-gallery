@@ -40,8 +40,6 @@ export const MaskShader = {
     uniform sampler2D textMask;
     uniform float top;
 
-    uniform sampler2D map1;
-
     void main() {
       float x = (textureCoord.x / textureCoord.w);
       float y = (textureCoord.y / textureCoord.w);

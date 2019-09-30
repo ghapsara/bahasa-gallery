@@ -12,6 +12,9 @@ const HEIGHT = window.innerHeight * 5;
 const COLOR = '#ff8000';
 const BACKGROUND_COLOR = '#423c4a';
 
+const MAIN_COLOR = BACKGROUND_COLOR;
+const SECONDARY_COLOR = 'white';
+
 function DetailCanvas({ top }) {
   const map = useMemo(() => {
     const canvas = createCanvas(WIDTH, WIDTH);
@@ -23,11 +26,11 @@ function DetailCanvas({ top }) {
     const halfW = w * 0.5;
 
     context.beginPath();
-    context.fillStyle = 'white';
+    context.fillStyle = SECONDARY_COLOR;
     context.fillRect(0, 0, w, w);
 
     context.beginPath();
-    context.fillStyle = 'red';
+    context.fillStyle = MAIN_COLOR;
     context.fillRect(halfW * 0.5, halfW * 0.5, halfW, halfW);
 
     return new THREE.CanvasTexture(canvas);
@@ -40,9 +43,15 @@ function DetailCanvas({ top }) {
 
     const context = canvas.getContext('2d');
 
+    const halfW = w * 0.5;
+
     context.beginPath();
-    context.fillStyle = BACKGROUND_COLOR;
+    context.fillStyle = MAIN_COLOR;
     context.fillRect(0, 0, w, w);
+
+    context.beginPath();
+    context.fillStyle = SECONDARY_COLOR;
+    context.fillRect(halfW * 0.5, halfW * 0.5, halfW, halfW);
 
     return new THREE.CanvasTexture(canvas);
   }, []);
@@ -58,8 +67,9 @@ function DetailCanvas({ top }) {
 
     context.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
     context.textAlign = 'center';
-    context.textBaseline = 'top';
-    context.fillStyle = COLOR;
+    context.textBaseline = 'middle';
+    // context.textBaseline = 'top';
+    context.fillStyle = SECONDARY_COLOR;
     context.fillText('this should be long', w * 0.6, w * 0.5);
 
     return new THREE.CanvasTexture(canvas);
@@ -77,7 +87,7 @@ function DetailCanvas({ top }) {
           uniforms-textMask-value={text}
           uniforms-top-value={top.interpolate([0, HEIGHT], [0.0, 1.0])}
           blending={THREE.AdditiveBlending}
-        // transparent
+          transparent
         />
       </mesh>
     </>

@@ -9,11 +9,9 @@ import fontJson from './font/helvetica.json';
 
 const WIDTH = window.innerWidth;
 const HEIGHT = window.innerHeight * 5;
-const COLOR = '#ff8000';
-const BACKGROUND_COLOR = '#423c4a';
 
-const MAIN_COLOR = BACKGROUND_COLOR;
-const SECONDARY_COLOR = 'white';
+const MAIN_COLOR = '#423c4a';
+const SECONDARY_COLOR = '#fa575f';
 
 function DetailCanvas({ top }) {
   const map = useMemo(() => {
@@ -70,14 +68,14 @@ function DetailCanvas({ top }) {
     context.textBaseline = 'middle';
     // context.textBaseline = 'top';
     context.fillStyle = SECONDARY_COLOR;
-    context.fillText('this should be long', w * 0.6, w * 0.5);
+    context.fillText('this should be long', w * 0.5, w * 0.5);
 
     return new THREE.CanvasTexture(canvas);
   }, []);
 
   return (
     <>
-      <mesh>
+      <mesh position={[-2.5, 0, 0]}>
         <planeGeometry attach="geometry" args={[5, 5, 5]} />
         <a.shaderMaterial
           attach="material"
@@ -89,6 +87,10 @@ function DetailCanvas({ top }) {
           blending={THREE.AdditiveBlending}
           transparent
         />
+      </mesh>
+      <mesh position={[2.5, 0, 0]}>
+        <meshBasicMaterial attach="material" map={text} />
+        <planeBufferGeometry attach="geometry" args={[5, 5, 5]} />
       </mesh>
     </>
   )

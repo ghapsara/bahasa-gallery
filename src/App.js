@@ -8,7 +8,7 @@ import * as random from 'canvas-sketch-util/random';
 import * as THREE from 'three';
 import { getPixelRatio, createCanvas } from './utlis';
 import bali from './maps/bali.json';
-import DetailCanvas from './DetailCanvas';
+import Bahasa from './Bahasa';
 
 const pixelRatio = getPixelRatio();
 const BACKGROUND_COLOR = '#423c4a';
@@ -117,25 +117,37 @@ function Maps({ map, cityMap, position, name, zoomIn, isActive, setIsActive, isI
 		}
 	}, [initialScale, isInDetail, name, position, set, setIsActive, zoomIn, zoomOut]);
 
+	const [{ ii }] = useSpring(() => ({ ii: HEIGHT }));
+
 	return (
-		<a.mesh
+		<a.group
 			position={p}
-			scale={scale.interpolate(s => [s, s, s])}
-			rotation={interpolate([rX, rY], (x, y) => [lerp(-0.02, 0.08, y), lerp(-0.1, 0.1, x), 0])}
-			onPointerOver={onMouseOver}
-			onPointerOut={onMouseOut}
-			onPointerMove={onMouseMove}
-			onClick={onClick}
 		>
-			<a.meshBasicMaterial attach="material" opacity={o}>
-				<canvasTexture attach="map" image={canvas} />
-			</a.meshBasicMaterial>
-			<planeBufferGeometry attach="geometry" args={[1, sizeH, 1]} />
-		</a.mesh>
+			<a.mesh
+				scale={scale.interpolate(s => [s, s, s])}
+				rotation={interpolate([rX, rY], (x, y) => [lerp(-0.02, 0.08, y), lerp(-0.1, 0.1, x), 0])}
+				onPointerOver={onMouseOver}
+				onPointerOut={onMouseOut}
+				onPointerMove={onMouseMove}
+				onClick={onClick}
+			>
+				<a.meshBasicMaterial attach="material" opacity={o}>
+					<canvasTexture attach="map" image={canvas} />
+				</a.meshBasicMaterial>
+				<planeBufferGeometry attach="geometry" args={[1, sizeH, 1]} />
+			</a.mesh>
+			{isActive &&
+				(<group
+					position={[position[0], 0, -3]}
+				>
+					<Bahasa top={ii} />
+				</group>
+				)}
+		</a.group>
 	)
 }
 
-function MainMaps({ map, position, name, zoomIn, isActive, setIsActive, isInDetail, zoomOut }) {
+function MainMaps({ map, position, name }) {
 	const canvas = useMemo(() => {
 		const H = WIDTH * 0.7;
 		const w = WIDTH * pixelRatio;
@@ -150,25 +162,7 @@ function MainMaps({ map, position, name, zoomIn, isActive, setIsActive, isInDeta
 		const canvas = createCanvas(WIDTH, H);
 		const context = canvas.getContext('2d');
 
-		// context.beginPath();
-		// context.lineWidth = 20;
-		// context.strokeStyle = COLOR;
-		// context.strokeRect(0, 0, w, h);
-
-		// const fontSize = 0.15 * WIDTH;
-		// context.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
-		// context.textAlign = 'center';
-		// context.textBaseline = 'top';
-		// context.fillStyle = COLOR;
-		// context.fillText('name', w * 0.5, h * 0.84);
-
 		const path = geoPath(projection, context);
-
-		// context.translate(w * 0.1, h * 0.1);
-		// // context.beginPath();
-		// // context.fillStyle = COLOR;
-		// // path(f);
-		// // context.fill();
 
 		context.beginPath();
 		context.strokeStyle = COLOR;
@@ -179,16 +173,11 @@ function MainMaps({ map, position, name, zoomIn, isActive, setIsActive, isInDeta
 		return canvas;
 	}, [map, name]);
 
-	const material = new THREE.MeshBasicMaterial({
-		map: new THREE.CanvasTexture(canvas),
-		transparent: true
-	})
-
 	return (
-		<mesh position={position} scale={[1.5, 1.5, 1.5]} material={material}>
-			{/* <meshBasicMaterial attach="material">
+		<mesh position={position} scale={[1.5, 1.5, 1.5]}>
+			<meshBasicMaterial attach="material" transparent>
 				<canvasTexture attach="map" image={canvas} />
-			</meshBasicMaterial> */}
+			</meshBasicMaterial>
 			<planeBufferGeometry attach="geometry" args={[1, 0.7, 1]} />
 		</mesh>
 	)
@@ -213,17 +202,12 @@ function Province({ top, xy, setXY, setScroll }) {
 	}, [object.geometries]);
 
 	const initialState = useMemo(() => {
-		return object.geometries.map(d => {
-			const { properties: { kabkot: name } } = d;
+		return object.geometries.reduce((prev, curr) => {
+			const { properties: { kabkot: name } } = curr;
 
 			return {
-				name,
-				isActive: false
-			}
-		}).reduce((prev, curr) => {
-			return {
 				...prev,
-				[curr.name]: curr.isActive,
+				[name]: false,
 			}
 		}, {})
 	}, [object.geometries]);
@@ -258,13 +242,7 @@ function Province({ top, xy, setXY, setScroll }) {
 				key="bali-1"
 				name="bali"
 				map={map}
-				cityMap={map}
 				position={[0, 0, 4]}
-				zoomIn={zoomIn}
-				zoomOut={zoomOut}
-				isActive={isActive["bali"]}
-				setIsActive={setIsActive}
-				isInDetail={isInDetail}
 			/>
 			{object.geometries.map((d, i) => {
 				const { properties: { kabkot: name } } = d;
@@ -330,17 +308,17 @@ function App() {
 				>
 					<div className="canvas-container">
 						<Canvas
-							// pixelRatio={pixelRatio} 
+							// pixelRatio={pixelRatio}
 							style={{
 								backgroundColor: BACKGROUND_COLOR
 							}}>
-							{/* <Province
+							<Province
 								top={top}
 								xy={xy}
 								setXY={setXY}
 								setScroll={setScroll}
-							/> */}
-							<DetailCanvas top={top} />
+							/>
+							{/* <Bahasa top={top} /> */}
 						</Canvas>
 					</div>
 				</div>

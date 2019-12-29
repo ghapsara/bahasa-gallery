@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback } from 'react';
 import { useThree } from 'react-three-fiber';
-import { a } from 'react-spring/three';
+import { a, interpolate } from 'react-spring/three';
 import { chunk } from 'lodash-es';
 import { mapRange } from 'canvas-sketch-util/math';
 import { shuffle } from 'canvas-sketch-util/random';
@@ -33,7 +33,7 @@ const bahasaAll = provinsiBahasa.reduce((prev, curr) => ({
 
 const bahasa = bahasaAll["Jawa Tengah"];
 
-const FONT_SIZE = 500;
+const FONT_SIZE = 500; // size of the window
 const FONT = `bold ${FONT_SIZE}px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
 
 function createTextArray(bahasa) {
@@ -85,7 +85,7 @@ function createTextArray(bahasa) {
   return c;
 }
 
-function Text({ x, text, width, height }) {
+function Text({ x, text, width, height, isInDetail }) {
   const canvas = useMemo(() => {
     const canvas = createCanvas(width, height);
     const context = canvas.getContext('2d');
@@ -107,13 +107,13 @@ function Text({ x, text, width, height }) {
 
   return (
     <mesh position={[x, 0, 0]}>
-      <meshBasicMaterial attach="material" transparent map={canvasTexture} />
+      <meshBasicMaterial attach="material" transparent map={canvasTexture} opacity={isInDetail ? 1 : 0} />
       <planeGeometry attach="geometry" args={[width, height, 1]} />
     </mesh>
   );
 }
 
-function Bahasa({ top }) {
+function Bahasa({ top, position, isInDetail }) {
   const { viewport } = useThree();
 
   const texts = createTextArray(bahasa);
@@ -134,8 +134,10 @@ function Bahasa({ top }) {
     }
   }, [x0]);
 
+  const [x, y, z] = !!position ? position : [0, 0, 0];
+
   return (
-    <>
+    <group position={[x, y, z - 3]}>
       {texts.map((txt, i) => {
         const { data, width } = txt;
         const interp = i === 1 || i === 3 ? toLeft(width) : toRight(width);
@@ -144,7 +146,7 @@ function Bahasa({ top }) {
         return (
           <a.group
             key={i}
-            position={top.interpolate(t => {
+            position={interpolate([top], (t) => {
               const x = interp(t);
 
               return [x, y, 0];
@@ -152,12 +154,12 @@ function Bahasa({ top }) {
             scale={[s, s, s]}
           >
             {data.map((t, j) =>
-              <Text key={i + j} {...t} />
+              <Text key={i + j} {...t} isInDetail={isInDetail} />
             )}
           </a.group>
         )
       })}
-    </>
+    </group>
   );
 }
 

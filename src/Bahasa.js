@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { useThree } from 'react-three-fiber';
 import { a, interpolate } from 'react-spring/three';
 import { chunk } from 'lodash-es';
@@ -7,7 +7,7 @@ import { shuffle } from 'canvas-sketch-util/random';
 import * as THREE from 'three';
 import { createCanvas, getPixelRatio } from './utlis';
 import provinsiBahasa from './data/provinsi-bahasa.json';
-import kabkotBahasa from './data/bahasa-kabkot.json';
+// import kabkotBahasa from './data/bahasa-kabkot.json';
 
 // const b = kabkotBahasa.reduce((prev, curr) => {
 //   const key = curr.provinsi + "-" + curr.kabkot;
@@ -31,7 +31,7 @@ const bahasaAll = provinsiBahasa.reduce((prev, curr) => ({
   [curr.provinsi]: curr.bahasa,
 }), {});
 
-const bahasa = bahasaAll["Jawa Tengah"];
+const bahasa = bahasaAll["Bali"];
 
 const FONT_SIZE = 500; // size of the window
 const FONT = `bold ${FONT_SIZE}px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
@@ -105,9 +105,22 @@ function Text({ x, text, width, height, isInDetail }) {
   const canvasTexture = new THREE.CanvasTexture(canvas);
   canvasTexture.minFilter = THREE.LinearFilter;
 
+  const [opacity, setOpacity] = useState(0);
+
+  useEffect(() => {
+    if (isInDetail) {
+      setTimeout(() => {
+        setOpacity(1)
+      }, 1000);
+    };
+    if (!isInDetail) {
+      setOpacity(0);
+    }
+  }, [isInDetail, opacity, setOpacity]);
+
   return (
     <mesh position={[x, 0, 0]}>
-      <meshBasicMaterial attach="material" transparent map={canvasTexture} opacity={isInDetail ? 1 : 0} />
+      <a.meshBasicMaterial attach="material" transparent map={canvasTexture} opacity={opacity} />
       <planeGeometry attach="geometry" args={[width, height, 1]} />
     </mesh>
   );
@@ -118,21 +131,21 @@ function Bahasa({ top, position, isInDetail }) {
 
   const texts = createTextArray(bahasa);
 
-  const x0 = viewport.width / 2;
+  const vw = viewport.width;
   const s = 0.005;
   const r = [-3, -1.5, 0, 1.5, 3];
 
   const toLeft = useCallback((width) => {
     return (t) => {
-      return mapRange(t, 0, SCROLL_VIEW_HEIGHT, x0, (-width * s) - x0);
+      return mapRange(t, 0, SCROLL_VIEW_HEIGHT, vw, (-width * s) - vw);
     }
-  }, [x0]);
+  }, [vw]);
 
   const toRight = useCallback((width) => {
     return (t) => {
-      return mapRange(t, 0, SCROLL_VIEW_HEIGHT, (-width * s) - x0, x0);
+      return mapRange(t, 0, SCROLL_VIEW_HEIGHT, (-width * s) - vw, vw);
     }
-  }, [x0]);
+  }, [vw]);
 
   const [x, y, z] = !!position ? position : [0, 0, 0];
 

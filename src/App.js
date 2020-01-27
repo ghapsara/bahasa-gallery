@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Canvas } from 'react-three-fiber';
-import { useSpring, a, interpolate } from 'react-spring/three';
+import { useSpring, a, interpolate, config } from 'react-spring/three';
 import { mapRange } from 'canvas-sketch-util/math';
-import { insideCircle } from 'canvas-sketch-util/random';
+import { insideCircle, shuffle, pick } from 'canvas-sketch-util/random';
 import bali from './maps/bali.json';
 import Maps from './Maps';
 import MainMaps from './MainMaps';
@@ -11,7 +11,15 @@ import {
 	BACKGROUND_COLOR,
 	SCROLL_HEIGHT,
 	SCROLL_VIEW_HEIGHT,
+	PIXEL_RATIO,
+	COLORS,
+	DOPE,
+	SCROLL_WIDTH,
+	SCROLL_VIEW_WIDTH,
 } from './constants';
+
+import Gallery from './Gallery';
+import Search from './Search';
 
 function Province({ top, setScroll, isInDetail, setIsInDetail }) {
 	const map = bali;
@@ -19,7 +27,7 @@ function Province({ top, setScroll, isInDetail, setIsInDetail }) {
 	const object = map.objects[provinceName];
 
 	const totalMaps = object.geometries.length;
-	const v = 2;
+	const v = 3;
 	const maxZoom = ((totalMaps * v) + 3);
 
 	const positions = useMemo(() => {
@@ -35,7 +43,7 @@ function Province({ top, setScroll, isInDetail, setIsInDetail }) {
 		}, {});
 	}, [object.geometries]);
 
-	const [maps, setIsActive] = useState(null);
+	const [maps, setMaps] = useState(null);
 	// const isInDetail = maps !== null;
 	const mapsPosition = positions[maps];
 
@@ -47,7 +55,7 @@ function Province({ top, setScroll, isInDetail, setIsInDetail }) {
 		const [x, y, z] = position;
 		const top = mapRange(z - 3, 0, -1 * maxZoom, 0, SCROLL_VIEW_HEIGHT);
 
-		setScroll(top);
+		setScroll(0, top);
 		setXY({ xy: [x, y] });
 
 		setScrollPosition(top);
@@ -56,18 +64,18 @@ function Province({ top, setScroll, isInDetail, setIsInDetail }) {
 	const zoomOut = useCallback(() => {
 		setXY({ xy: [0, 0] });
 
-		setScroll(scrollPosition);
+		setScroll(0, scrollPosition);
 	}, [scrollPosition, setScroll, setXY]);
 
 	const onClick = useCallback((name, position) => {
 		return () => {
 			if (!isInDetail) {
 				setIsInDetail(true);
-				setIsActive(name);
+				setMaps(name);
 				zoomIn(position);
 			} else {
 				setIsInDetail(false);
-				setIsActive(null);
+				setMaps(null);
 				zoomOut();
 			}
 		}
@@ -111,41 +119,70 @@ function Province({ top, setScroll, isInDetail, setIsInDetail }) {
 						isInDetail={isInDetail}
 						onClick={onClick}
 						maxZoom={maxZoom}
+						top={top}
 					/>
 				)
 			})}
-			<Bahasa
+			{/* <Bahasa
 				top={top}
 				position={mapsPosition}
 				isInDetail={isInDetail}
-			/>
+			/> */}
 		</a.group>
 	)
 }
 
 function App() {
-	const [{ top }, set] = useSpring(() => ({
-		to: { top: 0 },
+	const [{ top, left }, set] = useSpring(() => ({
+		from: { top: 0, left: 0 },
+		config: config.slow,
 	}));
 
 	const scrollRef = useRef(null);
 
 	const [isInDetail, setIsInDetail] = useState(false);
 
-	const setScroll = useCallback((t) => {
-		scrollRef.current.scrollTo(0, t);
+	const setScroll = useCallback((l, t) => {
+		scrollRef.current.scrollTo(l, t);
 	}, []);
 
 	const onScroll = useCallback((e) => {
 		const top = e.target.scrollTop;
-		set({ top });
+		const left = e.target.scrollLeft;
+
+		set({ top, left });
 	}, [set]);
 
-	useEffect(() => {
-		if (isInDetail) {
-			setScroll(0);
-		}
-	}, [isInDetail, setScroll]);
+	// return (
+	// 	<div>
+	// 		<div
+	// 			style={{
+	// 				display: 'grid',
+	// 				gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr",
+	// 				height: "100vh",
+	// 			}}
+	// 		>
+	// 			{COLORS.map((d, i) =>
+	// 				<div key={i} style={{
+	// 					backgroundColor: d,
+	// 					display: 'flex',
+	// 					justifyContent: 'center',
+	// 					alignItems: 'center',
+	// 					color: 'white',
+	// 				}}>
+	// 					{i + 1}-{d}
+	// 				</div>
+	// 			)}
+	// 		</div>
+	// 		{/* <Search /> */}
+	// 	</div>
+	// )
+
+	// useEffect(() => {
+	// 	if (isInDetail) {
+	// 		setScroll(0);
+	// 	}
+	// }, [isInDetail, setScroll]);
 
 	return (
 		<div style={{
@@ -164,7 +201,7 @@ function App() {
 				<div
 					style={{
 						height: SCROLL_HEIGHT,
-						width: '100vw',
+						width: SCROLL_WIDTH,
 						zIndex: 10,
 					}}
 				>
@@ -172,20 +209,24 @@ function App() {
 						<Canvas
 							// pixelRatio={PIXEL_RATIO}
 							style={{
+								// ["#ee1d0e", "#f95850", "#f43e32", "#f87c72", "#d34b3a"]
+
 								backgroundColor: BACKGROUND_COLOR
-							}}>
+							}}
+						>
 							<Province
 								top={top}
 								setScroll={setScroll}
 								isInDetail={isInDetail}
 								setIsInDetail={setIsInDetail}
 							/>
-							{/* <Bahasa
+							{/* <Gallery
 								top={top}
-								isInDetail={true}
-								position={[0, 0, ]}
+								left={left}
+								setScroll={setScroll}
 							/> */}
 						</Canvas>
+						{/* <Search /> */}
 					</div>
 				</div>
 			</div>

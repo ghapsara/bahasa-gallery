@@ -1,13 +1,16 @@
 import React, { useMemo, useRef, useCallback, useState } from 'react'
-import { COLOR, PIXEL_RATIO, SCROLL_VIEW_HEIGHT, WIDTH, HEIGHT } from './constants';
-import { useThree, useFrame } from 'react-three-fiber';
+import { geoMercator, geoPath, map } from 'd3';
+import { feature } from 'topojson-client';
+import { useThree, useFrame, Dom } from 'react-three-fiber';
 import { a, useSpring, interpolate } from 'react-spring/three';
 import random from 'canvas-sketch-util/random';
-import { mapRange } from 'canvas-sketch-util/math';
-import { chunk, range } from 'lodash-es';
+import { mapRange, lerp } from 'canvas-sketch-util/math';
+import { chunk } from 'lodash-es';
 import { createCanvas } from './utlis';
+import { COLOR, PIXEL_RATIO, SCROLL_VIEW_HEIGHT, SCROLL_VIEW_WIDTH, WIDTH, HEIGHT, COLORS, BACKGROUND_COLOR, DOPE, SCROLL_HEIGHT } from './constants';
+import { maps as mapsData } from './maps/index.js';
 
-function Paintings({ ...props }) {
+function Painting({ maps, mapsKey, ...props }) {
   const canvas = useMemo(() => {
     const height = window.innerWidth;
     const width = height * 1.5;
@@ -17,21 +20,45 @@ function Paintings({ ...props }) {
     const w = width * PIXEL_RATIO;
     const h = height * PIXEL_RATIO;
 
+    const sw = w * 0.8;
+    const sh = h * 0.6;
+
     context.beginPath();
-    context.strokeStyle = COLOR;
+    context.fillStyle = props.color;
+    context.fillRect(0, 0, w, h);
+
+    context.beginPath();
+    context.strokeStyle = props.color;
     context.lineWidth = 30;
     context.strokeRect(0, 0, w, h);
 
+
+    const font = `bold 150px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
+    context.font = font;
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillStyle = "white";
+    context.fillText(mapsKey.replace("-", " "), w * 0.5, h * 0.9);
+    // context.fillText(props.color, w * 0.5, h * 0.9);
+
+    const f = feature(maps, maps.objects[mapsKey]);
+    const projection = geoMercator().fitSize([sw, sh], f);
+
+    const path = geoPath(projection, context);
+
+    context.translate(w * 0.1, h * 0.2);
+
     context.beginPath();
-    context.fillStyle = COLOR;
-    context.fillRect(w * 0.25, h * 0.25, w * 0.5, h * 0.5);
+    context.fillStyle = "white";
+    path(f);
+    context.fill();
 
     return canvas;
-  }, []);
+  }, [maps, mapsKey, props.color]);
+
   return (
     <mesh {...props}>
-      {/* <meshBasicMaterial attach="material" color={COLOR} wireframe={true} /> */}
-      <meshBasicMaterial attach="material">
+      <meshBasicMaterial attach="material" transparent>
         <canvasTexture attach="map" image={canvas} />
       </meshBasicMaterial>
       <planeBufferGeometry attach="geometry" args={[1.5, 1, 1]} />
@@ -40,7 +67,7 @@ function Paintings({ ...props }) {
 }
 
 function Text() {
-  const { size, viewport } = useThree();
+  const { size } = useThree();
   const { width, height } = size;
 
   const canvas = useMemo(() => {
@@ -60,12 +87,8 @@ function Text() {
     context.font = font;
     context.textAlign = 'left';
     context.textBaseline = 'middle';
-    context.fillStyle = COLOR;
-    context.fillText("IIIEOWM", 0, h * 0.4);
-
-    const font1 = `bold ${fontSize * 0.5}px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
-    context.font = font1;
-    context.fillText("123456", 0, (h * 0.5) + fontSize);
+    context.fillStyle = "#34363a";
+    context.fillText("Galeri Bahasa", 0, h * 0.4);
 
     return canvas;
   }, [height, width]);
@@ -84,34 +107,24 @@ function Text() {
   )
 }
 
-function ButtonExit() {
-  return (
-    <mesh position={[-3, -3, 0]}>
-      <meshBasicMaterial attach="material" color={COLOR} />
-      <planeBufferGeometry attach="geometry" args={[1, 1, 1]} />
-    </mesh>
-  )
-}
-
-function Gallery({ top, setScroll }) {
-  const n = 33;
-  const e = range(n);
+function Gallery({ top, left, setScroll }) {
+  const e = Object.keys(mapsData);
   const m = chunk(e, 6);
-
-  // const { viewport: { width } } = useThree();
 
   const w = 20;
   const w0 = -w;
   const w1 = w;
 
+  const sphereRadius = 3;
+
   const maps = useMemo(() => {
     return m.map((d, i) => {
       const x = mapRange(i, 0, m.length - 1, w0 + 5, w1 - 5);
 
-      const child = d.map(() => {
-        const r = random.insideSphere(3);
+      const child = d.map(key => {
+        const r = random.insideSphere(sphereRadius);
 
-        return r;
+        return [...r, key];
       });
 
       return {
@@ -123,30 +136,31 @@ function Gallery({ top, setScroll }) {
 
   const positionRef = useRef(false);
 
-  const [{ yz }, set] = useSpring(() => ({
+  const [{ y }, set] = useSpring(() => ({
     to: {
-      yz: [0, 0],
+      y: 0,
     }
   }));
 
   const onClick = useCallback((position) => {
     return () => {
+      const [p, c] = position;
+      let [x, y, z] = c;
+
+      const zScroll = mapRange((z - 4) * -1, 0, 7, 0, SCROLL_VIEW_HEIGHT);
+      const xScroll = mapRange(p[0] + x, w0, w1, 0, SCROLL_VIEW_WIDTH);
+
       if (positionRef.current) {
         set({
-          yz: [0, 0],
+          y: 0,
         });
-      } else {
-        const [p, c] = position;
-        let [x, y, z] = c;
-        const xP = mapRange(p[0] + x, w0, w1, 0, SCROLL_VIEW_HEIGHT);
 
-        setScroll(xP);
+        setScroll(xScroll, 0);
+      } else {
+        setScroll(xScroll, zScroll);
 
         y = y * -1;
-        z = (z - 4) * -1;
-        set({
-          yz: [y, z],
-        });
+        set({ y });
       }
 
       positionRef.current = !positionRef.current;
@@ -154,27 +168,37 @@ function Gallery({ top, setScroll }) {
   }, [set, setScroll, w0, w1]);
 
   return (
-    <>
-      <Text />
-      {/* <ButtonExit /> */}
-      <a.group
-        position={interpolate([top, yz], (t, [y, z]) => {
-          const x = mapRange(t, 0, SCROLL_VIEW_HEIGHT, w1, w0);
+    <a.group
+      position={interpolate([left, top, y], (l, t, y) => {
+        const x = mapRange(l, 0, SCROLL_VIEW_WIDTH, w1, w0);
+        const z = mapRange(t, 0, SCROLL_VIEW_HEIGHT, 0, 7);
 
-          return [x, y, z];
-        })}
-      >
-        {maps.map((d, i) => {
-          return (
-            <group key={i} position={d.parent}>
-              {d.child.map((c, j) =>
-                <Paintings key={`${i}-${j}`} position={c} onClick={onClick([d.parent, c])} />
-              )}
-            </group>
-          )
-        })}
-      </a.group>
-    </>
+        return [x, y, z];
+      })}
+    >
+      {maps.map((d, i) => {
+        return (
+          <group key={i} position={d.parent}>
+            {d.child.map((c, j) => {
+              const [x, y, z, mapsKey] = c;
+              const colorIndex = (i * 6) + j;
+
+              return (
+                <Painting
+                  key={mapsKey}
+                  position={[x, y, z]}
+                  onClick={onClick([d.parent, c])}
+                  color={COLORS[colorIndex]}
+                  maps={mapsData[mapsKey]}
+                  mapsKey={mapsKey}
+                />
+              )
+            }
+            )}
+          </group>
+        )
+      })}
+    </a.group>
   )
 }
 

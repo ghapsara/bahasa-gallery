@@ -12,8 +12,43 @@ import { maps as mapsData } from './maps/index.js';
 
 function Painting({ maps, mapsKey, ...props }) {
   const canvas = useMemo(() => {
-    const height = window.innerWidth;
-    const width = height * 1.5;
+    const height = window.innerWidth * 1.4;
+    const width = window.innerWidth;
+    const canvas = createCanvas(width, height);
+    const context = canvas.getContext('2d');
+
+    const w = width * PIXEL_RATIO;
+    const h = height * PIXEL_RATIO;
+
+    context.beginPath();
+    context.fillStyle = props.color;
+    context.fillRect(0, h * 0.85, w, h * 0.15);
+
+    context.beginPath();
+    context.strokeStyle = props.color;
+    context.lineWidth = 30;
+    context.strokeRect(0, 0, w, h);
+
+    const font = `bold 200px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
+    context.font = font;
+    context.fillStyle = "black";
+    // context.fillText(mapsKey.replace("-", " ").toUpperCase(), w * 0.05, h * 0.925);
+    context.fillText("Title", w * 0.05, h * 0.925);
+
+    const font1 = `100px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
+    context.font = font1;
+    context.fillStyle = "black";
+    context.fillText("5 bahasa", w * 0.05, h * 0.96);
+    context.fillText("subtitle", w * 0.05, h * 0.96);
+
+    return canvas;
+  }, [props.color]);
+
+  // SEPARATE MAP MESH TO GET THE 3D EFFECT
+
+  const mapCanvas = useMemo(() => {
+    const height = window.innerWidth * 1.4;
+    const width = window.innerWidth;
     const canvas = createCanvas(width, height);
     const context = canvas.getContext('2d');
 
@@ -21,48 +56,70 @@ function Painting({ maps, mapsKey, ...props }) {
     const h = height * PIXEL_RATIO;
 
     const sw = w * 0.8;
-    const sh = h * 0.6;
+    const sh = sw;
+
+    // context.beginPath();
+    // context.strokeStyle = "white";
+    // context.lineWidth = 10;
+    // context.strokeRect(0, 0, w, h);
+
 
     context.beginPath();
-    context.fillStyle = props.color;
-    context.fillRect(0, 0, w, h);
-
-    context.beginPath();
-    context.strokeStyle = props.color;
-    context.lineWidth = 30;
-    context.strokeRect(0, 0, w, h);
-
-
-    const font = `bold 150px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
-    context.font = font;
-    context.textAlign = 'center';
-    context.textBaseline = 'middle';
     context.fillStyle = "white";
-    context.fillText(mapsKey.replace("-", " "), w * 0.5, h * 0.9);
-    // context.fillText(props.color, w * 0.5, h * 0.9);
+    context.fillRect(0, 0, w, h);
 
     const f = feature(maps, maps.objects[mapsKey]);
     const projection = geoMercator().fitSize([sw, sh], f);
 
     const path = geoPath(projection, context);
 
-    context.translate(w * 0.1, h * 0.2);
+    context.translate(w * 0.1, h * 0.15);
 
     context.beginPath();
-    context.fillStyle = "white";
-    path(f);
-    context.fill();
+    context.fillStyle = props.color;
+    context.fillRect(0, 0, sw, sh);
+
+    // context.beginPath();
+    // context.fillStyle = props.color;
+    // path(f);
+    // context.fill();
 
     return canvas;
   }, [maps, mapsKey, props.color]);
 
+  const ref = useRef();
+
+  const [{ x, y }, set] = useSpring(() => ({
+    x: 0,
+    y: 0,
+  }));
+
+
+  // useFrame(({ clock, mouse }) => {
+  //   // console.log({ x: mouse.x, y: mouse.y });
+  //   set({ x: mouse.x, y: mouse.y });
+  // });
+
   return (
-    <mesh {...props}>
-      <meshBasicMaterial attach="material" transparent>
-        <canvasTexture attach="map" image={canvas} />
-      </meshBasicMaterial>
-      <planeBufferGeometry attach="geometry" args={[1.5, 1, 1]} />
-    </mesh>
+    <group position={props.position}>
+      <mesh renderOrder={1} onClick={props.onClick}>
+        <meshBasicMaterial attach="material" transparent={true}>
+          <canvasTexture attach="map" image={canvas} />
+        </meshBasicMaterial>
+        <planeBufferGeometry attach="geometry" args={[1, 1.4, 1]} />
+      </mesh>
+
+      <a.mesh
+        ref={ref}
+        renderOrder={0}
+        rotation={interpolate([x, y], (x, y) => [y * -0.5, x * 0.5, 0])}
+      >
+        <meshBasicMaterial attach="material" transparent={true} depthTest={false}>
+          <canvasTexture attach="map" image={mapCanvas} />
+        </meshBasicMaterial>
+        <planeBufferGeometry attach="geometry" args={[1, 1.4, 0]} />
+      </a.mesh>
+    </group>
   );
 }
 
@@ -134,7 +191,8 @@ function Gallery({ top, left, setScroll }) {
     });
   }, [m, w0, w1]);
 
-  const positionRef = useRef(false);
+  const positionRef = useRef(null);
+  const activeRef = useRef(false);
 
   const [{ y }, set] = useSpring(() => ({
     to: {
@@ -150,20 +208,22 @@ function Gallery({ top, left, setScroll }) {
       const zScroll = mapRange((z - 4) * -1, 0, 7, 0, SCROLL_VIEW_HEIGHT);
       const xScroll = mapRange(p[0] + x, w0, w1, 0, SCROLL_VIEW_WIDTH);
 
-      if (positionRef.current) {
+      if (positionRef.current === position && activeRef.current) {
         set({
           y: 0,
         });
 
         setScroll(xScroll, 0);
+        activeRef.current = false;
       } else {
         setScroll(xScroll, zScroll);
 
         y = y * -1;
         set({ y });
+        activeRef.current = true;
       }
 
-      positionRef.current = !positionRef.current;
+      positionRef.current = position;
     }
   }, [set, setScroll, w0, w1]);
 

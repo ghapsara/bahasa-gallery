@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Canvas } from 'react-three-fiber';
-import { useSpring, a, interpolate, config } from 'react-spring/three';
-import { mapRange } from 'canvas-sketch-util/math';
+import { useSpring, a, interpolate, config, useChain, useSprings, useTransition } from 'react-spring/three';
+import { mapRange, lerp } from 'canvas-sketch-util/math';
 import { insideCircle, shuffle, pick } from 'canvas-sketch-util/random';
 import bali from './maps/bali.json';
 import Maps from './Maps';
@@ -20,8 +20,10 @@ import {
 
 import Gallery from './Gallery';
 import Search from './Search';
+import Buttons from './Buttons';
+import { set } from 'd3';
 
-function Province({ top, setScroll, isInDetail, setIsInDetail }) {
+function Province({ top, setScroll, scrollRef, set, stop }) {
 	const map = bali;
 	const provinceName = 'bali';
 	const object = map.objects[provinceName];
@@ -31,110 +33,125 @@ function Province({ top, setScroll, isInDetail, setIsInDetail }) {
 	const maxZoom = ((totalMaps * v) + 3);
 
 	const positions = useMemo(() => {
-		return object.geometries.reduce((prev, d, i) => {
+		return object.geometries.map((d, i) => {
 			const { properties: { kabkot: name } } = d;
 			const [x, y] = insideCircle(3);
 			const z = (i + 1) * -v;
 
+			const s = maxZoom * 2;
+			const toTop = [x, s, z];
+			const toRight = [s, y, z];
+			const toBottom = [x, -s, z];
+			const toLeft = [-s, y, z];
+
+			const [x1, y1, z1] = pick([toTop, toRight, toBottom, toLeft]);
+
 			return {
-				...prev,
-				[name]: [x, y, z]
+				name,
+				from: {
+					position: [x, y, z]
+				},
+				to: {
+					position: [x1, y1, z1]
+				},
 			};
 		}, {});
-	}, [object.geometries]);
+	}, [maxZoom, object.geometries]);
 
-	const [maps, setMaps] = useState(null);
-	// const isInDetail = maps !== null;
-	const mapsPosition = positions[maps];
+	// jump to the detail 
+	// zoom in
+	// show bahasa
 
-	const [{ xy }, setXY] = useSpring(() => ({ xy: [0, 0] }));
+	const [active, setActive] = useState(null);
 
-	const [scrollPosition, setScrollPosition] = useState(0);
+	const mapRef = useRef();
+	const mapTransitions = useTransition(
+		active !== null ?
+			positions
+				.filter(p => p.name === active.name)
+			: positions,
+		p => p.name,
+		{
+			ref: mapRef,
+			unique: true,
+			from: ({ from }) => ({ ...from, position: [0, 0, from.position[2]] }),
+			enter: ({ from }) => ({ ...from }),
+			leave: ({ to }) => ({ ...to }),
+			update: ({ from }) => ({ ...from }),
+			config: config.slow,
+		}
+	);
 
-	const zoomIn = useCallback(position => {
-		const [x, y, z] = position;
-		const top = mapRange(z - 3, 0, -1 * maxZoom, 0, SCROLL_VIEW_HEIGHT);
+	// const bahasaRef = useRef();
 
-		setScroll(0, top);
-		setXY({ xy: [x, y] });
 
-		setScrollPosition(top);
-	}, [maxZoom, setScroll, setXY]);
+	const [isBahasa, setIsBahasa] = useState(false);
 
-	const zoomOut = useCallback(() => {
-		setXY({ xy: [0, 0] });
+	const springRef = useRef();
 
-		setScroll(0, scrollPosition);
-	}, [scrollPosition, setScroll, setXY]);
+	const [xy, setXY] = useState([0, 0, 0]);
+	const { xyz } = useSpring({
+		ref: springRef,
+		from: { xyz: xy, },
+		to: { xyz: xy, },
+	});
 
-	const onClick = useCallback((name, position) => {
+	const onClick = useCallback((name, item) => {
 		return () => {
-			if (!isInDetail) {
-				setIsInDetail(true);
-				setMaps(name);
-				zoomIn(position);
+			const [x, y, z] = item.from.position;
+
+			const z0 = mapRange(-z, 0, maxZoom, 0, SCROLL_VIEW_HEIGHT);
+			setScroll(0, z0);
+			stop();
+
+			if (active == null) {
+				setActive({
+					name,
+				});
+
+				setIsBahasa(true);
+
+				setXY([-x, -y, -z]);
 			} else {
-				setIsInDetail(false);
-				setMaps(null);
-				zoomOut();
+				setActive(null);
+
+				setIsBahasa(false);
+				setXY([0, 0, -z]);
 			}
 		}
-	}, [isInDetail, setIsInDetail, zoomIn, zoomOut]);
+	}, [active, maxZoom, setScroll, stop]);
 
-	const topInterpolator = useCallback((top) => {
-		if (isInDetail && maps !== null) {
-			return (mapsPosition[2] - 3) * -1;
-		}
-		return mapRange(top, 0, SCROLL_VIEW_HEIGHT, 0, maxZoom);
-	}, [isInDetail, maps, mapsPosition, maxZoom]);
+	useChain(active === null ? [mapRef, springRef] : [springRef, mapRef]);
 
 	return (
 		<a.group
-			position={interpolate([top, xy], (t, xy) => {
-				const [x, y] = xy;
-				const z = topInterpolator(t);
-
-				return [-x, -y, z];
+			position={interpolate([top, xyz], (t, xyz) => {
+				const [x, y, z] = xyz;
+				return [x, y, isBahasa ? z : mapRange(t, 0, SCROLL_VIEW_HEIGHT, 0, maxZoom)];
 			})}
 		>
-			<MainMaps
-				key="bali-1"
-				name={provinceName}
-				map={map}
-				position={[0, 0, 4]}
-			/>
-			{object.geometries.map((d, i) => {
-				const { properties: { kabkot: name } } = d;
-				const position = positions[name];
-				const isActive = maps === name;
-
-				return (
-					<Maps
-						key={i}
-						name={name}
-						topology={map}
-						geometry={d}
-						position={position}
-						isActive={isActive}
-						isInDetail={isInDetail}
-						onClick={onClick}
-						maxZoom={maxZoom}
-						top={top}
-					/>
-				)
-			})}
-			{/* <Bahasa
-				top={top}
-				position={mapsPosition}
-				isInDetail={isInDetail}
-			/> */}
+			<a.group>
+				{mapTransitions.map(({ props, key, item }) => {
+					return (
+						<a.mesh
+							key={key}
+							position={props.position}
+							onClick={onClick(key, item)}
+						>
+							<meshBasicMaterial attach="material" color={COLORS[27]} />
+							<planeBufferGeometry attach="geometry" args={[1, 1, 1]} />
+						</a.mesh>
+					);
+				})}
+			</a.group>
 		</a.group>
-	)
+	);
 }
 
 function App() {
-	const [{ top, left }, set] = useSpring(() => ({
+	const [{ top, left }, set, stop] = useSpring(() => ({
 		from: { top: 0, left: 0 },
+		to: { top: 0, left: 0 },
 		config: config.slow,
 	}));
 
@@ -184,6 +201,7 @@ function App() {
 	// 	}
 	// }, [isInDetail, setScroll]);
 
+
 	return (
 		<div style={{
 			width: '100%',
@@ -210,7 +228,6 @@ function App() {
 							// pixelRatio={PIXEL_RATIO}
 							style={{
 								// ["#ee1d0e", "#f95850", "#f43e32", "#f87c72", "#d34b3a"]
-
 								backgroundColor: BACKGROUND_COLOR
 							}}
 						>
@@ -219,6 +236,9 @@ function App() {
 								setScroll={setScroll}
 								isInDetail={isInDetail}
 								setIsInDetail={setIsInDetail}
+								scrollRef={scrollRef}
+								set={set}
+								stop={stop}
 							/>
 							{/* <Gallery
 								top={top}
@@ -226,12 +246,17 @@ function App() {
 								setScroll={setScroll}
 							/> */}
 						</Canvas>
-						{/* <Search /> */}
 					</div>
 				</div>
 			</div>
-		</div>
+		</div >
 	);
+
+	// return (
+	// 	<div>
+	// 		<Buttons />
+	// 	</div>
+	// )
 }
 
 export default App;

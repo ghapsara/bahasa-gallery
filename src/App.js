@@ -21,9 +21,9 @@ import {
 import Gallery from './Gallery';
 import Search from './Search';
 import Buttons from './Buttons';
-import { set } from 'd3';
+import { set, tree } from 'd3';
 
-function Province({ top, setScroll, scrollRef, set, stop }) {
+function Province({ top, setScroll, setIsInDetail }) {
 	const map = bali;
 	const provinceName = 'bali';
 	const object = map.objects[provinceName];
@@ -84,54 +84,54 @@ function Province({ top, setScroll, scrollRef, set, stop }) {
 
 	// const bahasaRef = useRef();
 
+	const [{ xy }, setXY] = useSpring(() => ({
+		xy: [0, 0],
+		config: config.molasses,
+	}))
 
-	const [isBahasa, setIsBahasa] = useState(false);
+	const [zScroll, setZScroll] = useState(0);
 
-	const springRef = useRef();
-
-	const [xy, setXY] = useState([0, 0, 0]);
-	const { xyz } = useSpring({
-		ref: springRef,
-		from: { xyz: xy, },
-		to: { xyz: xy, },
+	const zRef = useRef();
+	const { z } = useSpring({
+		ref: zRef,
+		from: { z: active !== null ? zScroll : top, },
+		to: { z: active !== null ? zScroll : top, },
 	});
 
 	const onClick = useCallback((name, item) => {
 		return () => {
 			const [x, y, z] = item.from.position;
 
-			const z0 = mapRange(-z, 0, maxZoom, 0, SCROLL_VIEW_HEIGHT);
-			setScroll(0, z0);
-			stop();
+			const st = mapRange(-z + 3, 0, maxZoom, 0, SCROLL_VIEW_HEIGHT);
+			setZScroll(st);
 
 			if (active == null) {
 				setActive({
 					name,
 				});
-
-				setIsBahasa(true);
-
-				setXY([-x, -y, -z]);
+				setXY({ xy: [-x, -y] });
+				setScroll(0, 0);
+				// setIsInDetail(true);
 			} else {
 				setActive(null);
-
-				setIsBahasa(false);
-				setXY([0, 0, -z]);
+				setXY({ xy: [0, 0] });
+				setScroll(0, st);
+				// setIsInDetail(false);
 			}
 		}
-	}, [active, maxZoom, setScroll, stop]);
+	}, [active, maxZoom, setIsInDetail, setScroll, setXY]);
 
-	useChain(active === null ? [mapRef, springRef] : [springRef, mapRef]);
+	useChain([mapRef, zRef]);
 
 	return (
-		<a.group
-			position={interpolate([top, xyz], (t, xyz) => {
-				const [x, y, z] = xyz;
-				return [x, y, isBahasa ? z : mapRange(t, 0, SCROLL_VIEW_HEIGHT, 0, maxZoom)];
-			})}
-		>
-			<a.group>
+		<group>
+			<a.group
+				position={interpolate([z, xy], (z, xy) => {
+					return [...xy, mapRange(z, 0, SCROLL_VIEW_HEIGHT, 0, maxZoom)];
+				})}
+			>
 				{mapTransitions.map(({ props, key, item }) => {
+					console.log('rendred');
 					return (
 						<a.mesh
 							key={key}
@@ -144,31 +144,53 @@ function Province({ top, setScroll, scrollRef, set, stop }) {
 					);
 				})}
 			</a.group>
-		</a.group>
+		</group>
 	);
 }
 
 function App() {
-	const [{ top, left }, set, stop] = useSpring(() => ({
-		from: { top: 0, left: 0 },
-		to: { top: 0, left: 0 },
-		config: config.slow,
+	const [[left, top], set] = useState([0, 0]);
+
+	const springRef = useRef();
+	const [{ leftSpring, topSpring }, setScrollSpring] = useSpring(() => ({
+		to: {
+			leftSpring: 0, topSpring: 0,
+		}
 	}));
 
-	const scrollRef = useRef(null);
+	const tRef = useRef();
+	const { t } = useSpring({
+		ref: tRef,
+		from: { t: top },
+		to: { t: top },
+	});
 
-	const [isInDetail, setIsInDetail] = useState(false);
+	const scrollRef = useRef(null);
 
 	const setScroll = useCallback((l, t) => {
 		scrollRef.current.scrollTo(l, t);
 	}, []);
 
-	const onScroll = useCallback((e) => {
-		const top = e.target.scrollTop;
-		const left = e.target.scrollLeft;
+	const [is, setIs] = useState(false);
 
-		set({ top, left });
-	}, [set]);
+	const onScroll = useCallback((e) => {
+		const left = e.target.scrollLeft;
+		const top = e.target.scrollTop;
+
+		set([left, top]);
+	}, []);
+
+	const onScrollSpring = useCallback((e) => {
+		const left = e.target.scrollLeft;
+		const top = e.target.scrollTop;
+
+		setScrollSpring({
+			leftSpring: left,
+			topSpring: top,
+		});
+	}, []);
+
+	useChain([tRef]);
 
 	// return (
 	// 	<div>
@@ -194,13 +216,6 @@ function App() {
 	// 		{/* <Search /> */}
 	// 	</div>
 	// )
-
-	// useEffect(() => {
-	// 	if (isInDetail) {
-	// 		setScroll(0);
-	// 	}
-	// }, [isInDetail, setScroll]);
-
 
 	return (
 		<div style={{
@@ -231,14 +246,13 @@ function App() {
 								backgroundColor: BACKGROUND_COLOR
 							}}
 						>
+							{/* <Bahasa
+								top={t}
+							/> */}
 							<Province
 								top={top}
 								setScroll={setScroll}
-								isInDetail={isInDetail}
-								setIsInDetail={setIsInDetail}
-								scrollRef={scrollRef}
-								set={set}
-								stop={stop}
+							// setIsInDetail={() => { console.log('h') }}
 							/>
 							{/* <Gallery
 								top={top}

@@ -111,12 +111,12 @@ function Province({ top, setScroll, setIsInDetail }) {
 				});
 				setXY({ xy: [-x, -y] });
 				setScroll(0, 0);
-				// setIsInDetail(true);
+				setIsInDetail(true);
 			} else {
 				setActive(null);
 				setXY({ xy: [0, 0] });
 				setScroll(0, st);
-				// setIsInDetail(false);
+				setIsInDetail(false);
 			}
 		}
 	}, [active, maxZoom, setIsInDetail, setScroll, setXY]);
@@ -131,7 +131,6 @@ function Province({ top, setScroll, setIsInDetail }) {
 				})}
 			>
 				{mapTransitions.map(({ props, key, item }) => {
-					console.log('rendred');
 					return (
 						<a.mesh
 							key={key}
@@ -151,19 +150,11 @@ function Province({ top, setScroll, setIsInDetail }) {
 function App() {
 	const [[left, top], set] = useState([0, 0]);
 
-	const springRef = useRef();
 	const [{ leftSpring, topSpring }, setScrollSpring] = useSpring(() => ({
 		to: {
 			leftSpring: 0, topSpring: 0,
 		}
 	}));
-
-	const tRef = useRef();
-	const { t } = useSpring({
-		ref: tRef,
-		from: { t: top },
-		to: { t: top },
-	});
 
 	const scrollRef = useRef(null);
 
@@ -176,7 +167,6 @@ function App() {
 	const onScroll = useCallback((e) => {
 		const left = e.target.scrollLeft;
 		const top = e.target.scrollTop;
-
 		set([left, top]);
 	}, []);
 
@@ -188,34 +178,11 @@ function App() {
 			leftSpring: left,
 			topSpring: top,
 		});
-	}, []);
+	}, [setScrollSpring]);
 
-	useChain([tRef]);
-
-	// return (
-	// 	<div>
-	// 		<div
-	// 			style={{
-	// 				display: 'grid',
-	// 				gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr",
-	// 				height: "100vh",
-	// 			}}
-	// 		>
-	// 			{COLORS.map((d, i) =>
-	// 				<div key={i} style={{
-	// 					backgroundColor: d,
-	// 					display: 'flex',
-	// 					justifyContent: 'center',
-	// 					alignItems: 'center',
-	// 					color: 'white',
-	// 				}}>
-	// 					{i + 1}-{d}
-	// 				</div>
-	// 			)}
-	// 		</div>
-	// 		{/* <Search /> */}
-	// 	</div>
-	// )
+	const scrollFunc = useCallback((e) => {
+		return is ? onScrollSpring(e) : onScroll(e);
+	}, [is, onScroll, onScrollSpring]);
 
 	return (
 		<div style={{
@@ -224,7 +191,7 @@ function App() {
 		}}>
 			<div
 				ref={scrollRef}
-				onScroll={onScroll}
+				onScroll={scrollFunc}
 				style={{
 					overflow: 'auto',
 					height: '100%',
@@ -246,13 +213,13 @@ function App() {
 								backgroundColor: BACKGROUND_COLOR
 							}}
 						>
-							{/* <Bahasa
-								top={t}
-							/> */}
+							{is && <Bahasa
+								top={topSpring}
+							/>}
 							<Province
 								top={top}
 								setScroll={setScroll}
-							// setIsInDetail={() => { console.log('h') }}
+								setIsInDetail={setIs}
 							/>
 							{/* <Gallery
 								top={top}

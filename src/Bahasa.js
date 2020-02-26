@@ -1,6 +1,6 @@
-import React, { useMemo, useCallback, useState, useEffect } from 'react';
-import { useThree } from 'react-three-fiber';
-import { a, interpolate } from 'react-spring/three';
+import React, { useMemo, useCallback, useState, useEffect, Suspense, useRef } from 'react';
+import { useThree, useUpdate, useFrame } from 'react-three-fiber';
+import { a, interpolate, useSpring, config, useChain } from 'react-spring/three';
 import { chunk } from 'lodash-es';
 import { mapRange } from 'canvas-sketch-util/math';
 import { shuffle } from 'canvas-sketch-util/random';
@@ -31,7 +31,7 @@ const bahasaAll = provinsiBahasa.reduce((prev, curr) => ({
   [curr.provinsi]: curr.bahasa,
 }), {});
 
-const bahasa = bahasaAll["Bali"];
+const bahasa = bahasaAll["Papua"];
 
 const FONT_SIZE = 500; // size of the window
 const FONT = `bold ${FONT_SIZE}px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
@@ -85,7 +85,7 @@ function createTextArray(bahasa) {
   return c;
 }
 
-function Text({ x, text, width, height, isInDetail }) {
+function Text({ x, text, width, height, }) {
   const canvas = useMemo(() => {
     const canvas = createCanvas(width, height);
     const context = canvas.getContext('2d');
@@ -105,28 +105,15 @@ function Text({ x, text, width, height, isInDetail }) {
   const canvasTexture = new THREE.CanvasTexture(canvas);
   canvasTexture.minFilter = THREE.LinearFilter;
 
-  const [opacity, setOpacity] = useState(0);
-
-  useEffect(() => {
-    if (isInDetail) {
-      setTimeout(() => {
-        setOpacity(1)
-      }, 1000);
-    };
-    if (!isInDetail) {
-      setOpacity(0);
-    }
-  }, [isInDetail, opacity, setOpacity]);
-
   return (
     <mesh position={[x, 0, 0]}>
-      <a.meshBasicMaterial attach="material" transparent map={canvasTexture} opacity={opacity} />
+      <a.meshBasicMaterial attach="material" transparent map={canvasTexture} />
       <planeGeometry attach="geometry" args={[width, height, 1]} />
     </mesh>
   );
 }
 
-function Bahasa({ top, position, isInDetail }) {
+function Bahasa({ top }) {
   const { viewport } = useThree();
 
   const texts = createTextArray(bahasa);
@@ -147,10 +134,8 @@ function Bahasa({ top, position, isInDetail }) {
     }
   }, [vw]);
 
-  const [x, y, z] = !!position ? position : [0, 0, 0];
-
   return (
-    <group position={[x, y, z - 3]}>
+    <group>
       {texts.map((txt, i) => {
         const { data, width } = txt;
         const interp = i === 1 || i === 3 ? toLeft(width) : toRight(width);
@@ -167,7 +152,7 @@ function Bahasa({ top, position, isInDetail }) {
             scale={[s, s, s]}
           >
             {data.map((t, j) =>
-              <Text key={i + j} {...t} isInDetail={isInDetail} />
+              <Text key={i + j} {...t} />
             )}
           </a.group>
         )
@@ -175,7 +160,5 @@ function Bahasa({ top, position, isInDetail }) {
     </group>
   );
 }
-
-
 
 export default Bahasa;

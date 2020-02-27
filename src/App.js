@@ -19,11 +19,8 @@ import {
 } from './constants';
 
 import Gallery from './Gallery';
-import Search from './Search';
-import Buttons from './Buttons';
-import { set, tree } from 'd3';
 
-function Province({ top, topActive, setTopActive, setSpring, setScroll }) {
+function Province({ top, setTop }) {
 	const map = bali;
 	const provinceName = 'bali';
 	const object = map.objects[provinceName];
@@ -58,13 +55,8 @@ function Province({ top, topActive, setTopActive, setSpring, setScroll }) {
 		}, {});
 	}, [maxZoom, object.geometries]);
 
-	// jump to the detail 
-	// zoom in
-	// show bahasa
-
 	const [active, setActive] = useState(null);
 
-	const mapRef = useRef();
 	const mapTransitions = useTransition(
 		active !== null ?
 			positions
@@ -72,31 +64,19 @@ function Province({ top, topActive, setTopActive, setSpring, setScroll }) {
 			: positions,
 		p => p.name,
 		{
-			ref: mapRef,
 			unique: true,
 			from: ({ from }) => ({ ...from, position: [0, 0, from.position[2]] }),
 			enter: ({ from }) => ({ ...from }),
 			leave: ({ to }) => ({ ...to }),
 			update: ({ from }) => ({ ...from }),
-			config: config.slow,
+			config: config.molasses,
 		}
 	);
 
-	// const bahasaRef = useRef();
-
 	const [{ xy }, setXY] = useSpring(() => ({
 		xy: [0, 0],
-		config: config.molasses,
+		config: config.stiff,
 	}))
-
-	// const [zScroll, setZScroll] = useState(0);
-
-	// const zRef = useRef();
-	// const { z } = useSpring({
-	// 	ref: zRef,
-	// 	from: { z: active !== null ? zScroll : top, },
-	// 	to: { z: active !== null ? zScroll : top, },
-	// });
 
 	const onClick = useCallback((name, item) => {
 		return () => {
@@ -106,20 +86,16 @@ function Province({ top, topActive, setTopActive, setSpring, setScroll }) {
 			if (active == null) {
 				setActive({ name });
 				setXY({ xy: [-x, -y] });
-				setSpring({ top: st });
-				setScroll(0, 0);
-				setTopActive(st);
+
+				setTop(st, true);
 			} else {
 				setActive(null);
 				setXY({ xy: [0, 0] });
-				setSpring({ top: st, });
-				setScroll(0, st);
-				setTopActive(null);
+
+				setTop(st, false);
 			}
 		}
-	}, [active, maxZoom, setScroll, setSpring, setTopActive, setXY]);
-
-	useChain([mapRef]);
+	}, [active, maxZoom, setTop, setXY]);
 
 	return (
 		<group>
@@ -152,7 +128,7 @@ function App() {
 		scrollRef.current.scrollTo(l, t);
 	}, []);
 
-	const [topActive, setTopActive] = useState(null);
+	const [active, setActive] = useState(null);
 
 	const [{ left, top, top1 }, set] = useSpring(() => ({
 		left: 0,
@@ -160,19 +136,20 @@ function App() {
 		top1: 0,
 	}));
 
-	const setSpring = useCallback((props) => {
-		if (topActive) {
-			set(props);
-		}
-	}, [set, topActive]);
+	const setTop = useCallback((position, isActive) => {
+		set({ top: position });
+
+		setActive(isActive ? position : null);
+		setScroll(0, isActive ? 0 : position);
+	}, [set, setScroll]);
 
 	const onScroll = useCallback((e) => {
 		set({
-			top: topActive || e.target.scrollTop,
+			top: active || e.target.scrollTop,
 			left: e.target.scrollLeft,
-			top1: topActive !== null ? e.target.scrollTop : 0,
+			top1: active !== null ? e.target.scrollTop : 0,
 		});
-	}, [set, topActive]);
+	}, [set, active]);
 
 	return (
 		<div style={{
@@ -203,15 +180,12 @@ function App() {
 								backgroundColor: BACKGROUND_COLOR
 							}}
 						>
-							{topActive !== null && <Bahasa
+							{active !== null && <Bahasa
 								top={top1}
-							/>
-							}
+							/>}
 							<Province
 								top={top}
-								topActive={topActive}
-								setTopActive={setTopActive}
-								setSpring={setSpring}
+								setTop={setTop}
 								setScroll={setScroll}
 							/>
 							{/* <Gallery
@@ -225,12 +199,6 @@ function App() {
 			</div>
 		</div >
 	);
-
-	// return (
-	// 	<div>
-	// 		<Buttons />
-	// 	</div>
-	// )
 }
 
 export default App;

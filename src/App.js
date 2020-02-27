@@ -23,7 +23,7 @@ import Search from './Search';
 import Buttons from './Buttons';
 import { set, tree } from 'd3';
 
-function Province({ top, setScroll, setIsInDetail }) {
+function Province({ top, topActive, setTopActive, setSpring, setScroll }) {
 	const map = bali;
 	const provinceName = 'bali';
 	const object = map.objects[provinceName];
@@ -89,45 +89,44 @@ function Province({ top, setScroll, setIsInDetail }) {
 		config: config.molasses,
 	}))
 
-	const [zScroll, setZScroll] = useState(0);
+	// const [zScroll, setZScroll] = useState(0);
 
-	const zRef = useRef();
-	const { z } = useSpring({
-		ref: zRef,
-		from: { z: active !== null ? zScroll : top, },
-		to: { z: active !== null ? zScroll : top, },
-	});
+	// const zRef = useRef();
+	// const { z } = useSpring({
+	// 	ref: zRef,
+	// 	from: { z: active !== null ? zScroll : top, },
+	// 	to: { z: active !== null ? zScroll : top, },
+	// });
 
 	const onClick = useCallback((name, item) => {
 		return () => {
 			const [x, y, z] = item.from.position;
-
 			const st = mapRange(-z + 3, 0, maxZoom, 0, SCROLL_VIEW_HEIGHT);
-			setZScroll(st);
 
 			if (active == null) {
-				setActive({
-					name,
-				});
+				setActive({ name });
 				setXY({ xy: [-x, -y] });
+				setSpring({ top: st });
 				setScroll(0, 0);
-				setIsInDetail(true);
+				setTopActive(st);
 			} else {
 				setActive(null);
 				setXY({ xy: [0, 0] });
+				setSpring({ top: st, });
 				setScroll(0, st);
-				setIsInDetail(false);
+				setTopActive(null);
 			}
 		}
-	}, [active, maxZoom, setIsInDetail, setScroll, setXY]);
+	}, [active, maxZoom, setScroll, setSpring, setTopActive, setXY]);
 
-	useChain([mapRef, zRef]);
+	useChain([mapRef]);
 
 	return (
 		<group>
 			<a.group
-				position={interpolate([z, xy], (z, xy) => {
-					return [...xy, mapRange(z, 0, SCROLL_VIEW_HEIGHT, 0, maxZoom)];
+				position={interpolate([top, xy], (t, xy) => {
+					const z = mapRange(t, 0, SCROLL_VIEW_HEIGHT, 0, maxZoom)
+					return [...xy, z];
 				})}
 			>
 				{mapTransitions.map(({ props, key, item }) => {
@@ -148,41 +147,32 @@ function Province({ top, setScroll, setIsInDetail }) {
 }
 
 function App() {
-	const [[left, top], set] = useState([0, 0]);
-
-	const [{ leftSpring, topSpring }, setScrollSpring] = useSpring(() => ({
-		to: {
-			leftSpring: 0, topSpring: 0,
-		}
-	}));
-
 	const scrollRef = useRef(null);
-
 	const setScroll = useCallback((l, t) => {
 		scrollRef.current.scrollTo(l, t);
 	}, []);
 
-	const [is, setIs] = useState(false);
+	const [topActive, setTopActive] = useState(null);
+
+	const [{ left, top, top1 }, set] = useSpring(() => ({
+		left: 0,
+		top: 0,
+		top1: 0,
+	}));
+
+	const setSpring = useCallback((props) => {
+		if (topActive) {
+			set(props);
+		}
+	}, [set, topActive]);
 
 	const onScroll = useCallback((e) => {
-		const left = e.target.scrollLeft;
-		const top = e.target.scrollTop;
-		set([left, top]);
-	}, []);
-
-	const onScrollSpring = useCallback((e) => {
-		const left = e.target.scrollLeft;
-		const top = e.target.scrollTop;
-
-		setScrollSpring({
-			leftSpring: left,
-			topSpring: top,
+		set({
+			top: topActive || e.target.scrollTop,
+			left: e.target.scrollLeft,
+			top1: topActive !== null ? e.target.scrollTop : 0,
 		});
-	}, [setScrollSpring]);
-
-	const scrollFunc = useCallback((e) => {
-		return is ? onScrollSpring(e) : onScroll(e);
-	}, [is, onScroll, onScrollSpring]);
+	}, [set, topActive]);
 
 	return (
 		<div style={{
@@ -191,7 +181,7 @@ function App() {
 		}}>
 			<div
 				ref={scrollRef}
-				onScroll={scrollFunc}
+				onScroll={onScroll}
 				style={{
 					overflow: 'auto',
 					height: '100%',
@@ -213,13 +203,16 @@ function App() {
 								backgroundColor: BACKGROUND_COLOR
 							}}
 						>
-							{is && <Bahasa
-								top={topSpring}
-							/>}
+							{topActive !== null && <Bahasa
+								top={top1}
+							/>
+							}
 							<Province
 								top={top}
+								topActive={topActive}
+								setTopActive={setTopActive}
+								setSpring={setSpring}
 								setScroll={setScroll}
-								setIsInDetail={setIs}
 							/>
 							{/* <Gallery
 								top={top}

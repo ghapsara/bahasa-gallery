@@ -1,7 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
-import { useSpring, interpolate, a, config } from 'react-spring/three';
+import { useSpring, interpolate, a } from 'react-spring/three';
 import { lerp } from 'canvas-sketch-util/math';
-import { pick } from 'canvas-sketch-util/random';
 import { geoMercator, geoPath } from 'd3';
 import { mesh } from 'topojson-client';
 import { createCanvas } from './utlis';
@@ -12,11 +11,8 @@ import {
   PIXEL_RATIO
 } from './constants';
 
-function Maps({ topology, geometry, position, name, maxZoom, isActive, isInDetail, onClick }) {
+function Maps({ topology, geometry, position, name, onClick }) {
   const sizeH = 1.3;
-  const size = 1;
-  const scaled = size * 1.5;
-
   const canvas = useMemo(() => {
     const H = WIDTH * sizeH;
 
@@ -57,32 +53,7 @@ function Maps({ topology, geometry, position, name, maxZoom, isActive, isInDetai
     return canvas;
   }, [topology, geometry, name, sizeH]);
 
-  const inactivePosition = useMemo(() => {
-    const [x, y, z] = position;
-
-    const s = maxZoom * 2;
-    const toTop = [x, s, z];
-    const toRight = [s, y, z];
-    const toBottom = [x, -s, z];
-    const toLeft = [-s, y, z];
-
-    return pick([toTop, toRight, toBottom, toLeft]);
-  }, [position, maxZoom]);
-
   const [{ rX, rY }, set] = useSpring(() => ({ rX: 0.5, rY: 0.5 }));
-
-  const { scale, p } = useSpring({
-    from: {
-      p: position,
-      scale: 1,
-    },
-    to: {
-      p: isInDetail ? (isActive ? position : inactivePosition) : position,
-      scale: isInDetail ? (isActive ? scaled : size) : size,
-    },
-    config: config.slow,
-    reset: true,
-  });
 
   const onMouseOut = useCallback(() => {
     set({ rX: 0.5, rY: 0.5 });
@@ -94,12 +65,12 @@ function Maps({ topology, geometry, position, name, maxZoom, isActive, isInDetai
 
   return (
     <a.mesh
-      position={p}
-      scale={scale.interpolate(s => [s, s, s])}
+      position={position}
+      scale={[1.5, 1.5, 1.5]}
       rotation={interpolate([rX, rY], (x, y) => [lerp(-0.02, 0.08, y), lerp(-0.1, 0.1, x), 0])}
       onPointerOut={onMouseOut}
       onPointerMove={onMouseMove}
-      onClick={onClick(name, position)}
+      onClick={onClick}
     >
       <a.meshBasicMaterial attach="material">
         <canvasTexture attach="map" image={canvas} />

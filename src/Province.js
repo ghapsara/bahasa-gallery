@@ -2,17 +2,14 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { useSpring, a, interpolate, config, useTransition } from 'react-spring/three';
 import { mapRange, } from 'canvas-sketch-util/math';
 import { insideCircle, pick } from 'canvas-sketch-util/random';
-import bali from './maps/bali.json';
-import {
-  SCROLL_VIEW_HEIGHT,
-  COLORS,
-} from './constants';
+import maps from './maps/index';
+import { SCROLL_VIEW_HEIGHT } from './constants';
 import Maps from './Maps';
+import { Close } from './Tooltip';
 
-function Province({ top, setTop }) {
-  const map = bali;
-  const provinceName = 'bali';
-  const object = map.objects[provinceName];
+function Province({ top, setTop, name, setCity, tooltipRef, close }) {
+  const map = maps[name];
+  const object = map.objects[name];
 
   const totalMaps = object.geometries.length;
   const v = 3;
@@ -20,7 +17,7 @@ function Province({ top, setTop }) {
 
   const [geometries, positions] = useMemo(() => {
     const positions = object.geometries.map((d, i) => {
-      const { properties: { kabkot: name } } = d;
+      const { properties: { kabkot: name }, id: key } = d;
       let [x, y] = insideCircle(6);
       const z = (i + 1) * -v;
 
@@ -34,6 +31,7 @@ function Province({ top, setTop }) {
 
       return {
         name,
+        key,
         from: {
           position: [x, y, z]
         },
@@ -62,7 +60,7 @@ function Province({ top, setTop }) {
       positions
         .filter(p => p.name === active.name)
       : positions,
-    p => p.name,
+    p => p.key,
     {
       unique: true,
       from: ({ from }) => ({ ...from, position: [0, 0, from.position[2]] }),
@@ -88,14 +86,16 @@ function Province({ top, setTop }) {
         setXY({ xy: [-x, -y] });
 
         setTop(st, true);
+        setCity(name);
       } else {
         setActive(null);
         setXY({ xy: [0, 0] });
 
         setTop(st, false);
+        setCity(null);
       }
     }
-  }, [active, maxZoom, setTop, setXY]);
+  }, [active, maxZoom, setTop, setXY, setCity]);
 
   return (
     <group>
@@ -109,15 +109,19 @@ function Province({ top, setTop }) {
           return (
             <Maps
               key={key}
-              name={key}
-              topology={bali}
-              geometry={geometries[key]}
+              name={item.name}
+              topology={map}
+              geometry={geometries[item.name]}
               position={props.position}
-              onClick={onClick(key, item.from.position)}
+              onClick={onClick(item.name, item.from.position)}
             />
           );
         })}
       </a.group>
+      {/* <Close
+        ref={tooltipRef} text="click to close" onClick={() => {
+          close();
+        }} /> */}
     </group>
   );
 }

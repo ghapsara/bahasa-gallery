@@ -1,39 +1,37 @@
-import React, { useMemo, useCallback, useState, useEffect, Suspense, useRef } from 'react';
-import { useThree, useUpdate, useFrame } from 'react-three-fiber';
-import { a, interpolate, useSpring, config, useChain } from 'react-spring/three';
+import React, { useMemo, useCallback, useEffect } from 'react';
+import { useThree } from 'react-three-fiber';
+import { a, interpolate } from 'react-spring/three';
 import { chunk } from 'lodash-es';
 import { mapRange } from 'canvas-sketch-util/math';
-import { shuffle } from 'canvas-sketch-util/random';
+import { shuffle, pick } from 'canvas-sketch-util/random';
 import * as THREE from 'three';
-import { createCanvas, getPixelRatio } from './utlis';
+import { createCanvas } from './utlis';
+import { PIXEL_RATIO, SCROLL_VIEW_HEIGHT, COLORS } from './constants';
 import provinsiBahasa from './data/provinsi-bahasa.json';
-// import kabkotBahasa from './data/bahasa-kabkot.json';
+import kabkotBahasa from './data/kabkot-bahasa.json';
+import { Scroll, Close } from './Tooltip';
 
-// const b = kabkotBahasa.reduce((prev, curr) => {
-//   const key = curr.provinsi + "-" + curr.kabkot;
-//   return {
-//     ...prev,
-//     [key]: curr.bahasa
-//   }
-// }, {});
+const cityBahasa = kabkotBahasa.reduce((prev, curr) => {
+  const key = curr.provinsi + "-" + curr.kabkot;
+  return {
+    ...prev,
+    [key]: curr.bahasa
+  }
+}, {});
 
-const pixelRatio = getPixelRatio();
+const provinceBahasa = provinsiBahasa.reduce((prev, curr) => {
+  return {
+    ...prev,
+    [curr.provinsi]: curr.bahasa,
+  }
+}, {});
 
-const COLOR = '#FE9B96';
+const bahasaAll = {
+  ...provinceBahasa,
+  ...cityBahasa,
+}
 
-const HEIGHT = window.innerHeight;
-
-const SCROLL_HEIGHT = 5 * HEIGHT;
-const SCROLL_VIEW_HEIGHT = SCROLL_HEIGHT - HEIGHT;
-
-const bahasaAll = provinsiBahasa.reduce((prev, curr) => ({
-  ...prev,
-  [curr.provinsi]: curr.bahasa,
-}), {});
-
-const bahasa = bahasaAll["Papua"];
-
-const FONT_SIZE = 500; // size of the window
+const FONT_SIZE = 500;
 const FONT = `bold ${FONT_SIZE}px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
 
 function createTextArray(bahasa) {
@@ -66,11 +64,14 @@ function createTextArray(bahasa) {
 
       x = x + (width / 2);
 
+      const color = pick(COLORS);
+
       return [...prev, {
         x,
         text,
         width,
         height,
+        color,
       }];
     }, []);
 
@@ -85,22 +86,22 @@ function createTextArray(bahasa) {
   return c;
 }
 
-function Text({ x, text, width, height, }) {
+function Text({ x, text, width, height, color }) {
   const canvas = useMemo(() => {
     const canvas = createCanvas(width, height);
     const context = canvas.getContext('2d');
 
-    const h = height * pixelRatio;
+    const h = height * PIXEL_RATIO;
 
     const font = `bold ${FONT_SIZE * 0.95}px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
     context.font = font;
     context.textAlign = 'left';
     context.textBaseline = 'middle';
-    context.fillStyle = COLOR;
+    context.fillStyle = color;
     context.fillText(text, 0, h * 0.5);
 
     return canvas;
-  }, [text, width, height]);
+  }, [text, width, height, color]);
 
   const canvasTexture = new THREE.CanvasTexture(canvas);
   canvasTexture.minFilter = THREE.LinearFilter;
@@ -113,10 +114,19 @@ function Text({ x, text, width, height, }) {
   );
 }
 
-function Bahasa({ top }) {
+function Bahasa({ top, province, city, scrollTooltipRef, closeTooltipRef, setTooltip }) {
   const { viewport } = useThree();
 
-  const texts = createTextArray(bahasa);
+  const texts = useMemo(() => {
+    const p = province.split("-").map(d => d[0].toUpperCase() + d.slice(1)).join(' ');
+    const location = `${p}-${city}`;
+
+    const bahasa = bahasaAll[location];
+    if (bahasa) {
+      return createTextArray(bahasa);
+    }
+    return [];
+  }, [province, city]);
 
   const vw = viewport.width;
   const s = 0.005;
@@ -133,6 +143,10 @@ function Bahasa({ top }) {
       return mapRange(t, 0, SCROLL_VIEW_HEIGHT, (-width * s) - vw, vw);
     }
   }, [vw]);
+
+  useEffect(() => {
+    setTooltip("scroll", true);
+  }, []);
 
   return (
     <group>
@@ -157,6 +171,8 @@ function Bahasa({ top }) {
           </a.group>
         )
       })}
+      <Scroll ref={scrollTooltipRef} />
+      <Close ref={closeTooltipRef} text="click map to close" />
     </group>
   );
 }

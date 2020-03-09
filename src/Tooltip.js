@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, forwardRef } from 'react';
 import { animated, useSpring, config, useTrail, interpolate } from 'react-spring';
+import { Dom, useThree } from 'react-three-fiber';
 import { lerp, clamp } from 'canvas-sketch-util/math';
 import styled from 'styled-components';
 import { BACKGROUND_COLOR } from './constants';
 
 const Wrapper = styled.div`
+  position: fixed;
+  top: 0;
   display: grid;
   height: 100px;
   width: 100vw;
@@ -20,7 +23,21 @@ const Text = styled.div`
   font-size: 18px;
 `;
 
-function Exit() {
+const Container = forwardRef((props, ref) => {
+  const { viewport: { width, height } } = useThree();
+
+  return (
+    <Dom
+      ref={ref}
+      position={[width * -0.5, height * -0.37, 0]}
+      style={{ display: 'none' }}
+    >
+      {props.children}
+    </Dom>
+  )
+})
+
+export const Close = forwardRef(({ text, ...props }, ref) => {
   const [w, h] = [65, 65];
 
   const { r1, r2, r3, r4, r0 } = useSpring({
@@ -75,64 +92,69 @@ function Exit() {
   });
 
   return (
-    <animated.div
-      style={{ transform: r0 }}
-    >
-      <svg width={w} height={h}>
-        <line
-          stroke="white"
-          strokeWidth={5}
-          x1={w * 0.2}
-          y1={h * 0.2}
-          x2={w * 0.8}
-          y2={h * 0.8}
-        />
-        <line
-          stroke="white"
-          strokeWidth={5}
-          x1={w * 0.8}
-          y1={h * 0.2}
-          x2={w * 0.2}
-          y2={h * 0.8}
-        />
-        <animated.rect
-          transform={r1}
-          x={0}
-          y={0}
-          width={w * 0.5}
-          height={h * 0.5}
-          fill={BACKGROUND_COLOR}
-        />
-        <animated.rect
-          transform={r2}
-          x={0}
-          y={0}
-          width={w * 0.5}
-          height={h * 0.5}
-          fill={BACKGROUND_COLOR}
-        />
-        <animated.rect
-          transform={r3}
-          x={0}
-          y={0}
-          width={w * 0.5}
-          height={h * 0.5}
-          fill={BACKGROUND_COLOR}
-        />
-        <animated.rect
-          transform={r4}
-          x={0}
-          y={0}
-          width={w * 0.5}
-          height={h * 0.5}
-          fill={BACKGROUND_COLOR}
-        />
-      </svg>
-    </animated.div>
+    <Container ref={ref}>
+      <Wrapper {...props}>
+        <animated.div
+          style={{ transform: r0 }}
+        >
+          <svg width={w} height={h}>
+            <line
+              stroke="white"
+              strokeWidth={5}
+              x1={w * 0.2}
+              y1={h * 0.2}
+              x2={w * 0.8}
+              y2={h * 0.8}
+            />
+            <line
+              stroke="white"
+              strokeWidth={5}
+              x1={w * 0.8}
+              y1={h * 0.2}
+              x2={w * 0.2}
+              y2={h * 0.8}
+            />
+            <animated.rect
+              transform={r1}
+              x={0}
+              y={0}
+              width={w * 0.5}
+              height={h * 0.5}
+              fill={BACKGROUND_COLOR}
+            />
+            <animated.rect
+              transform={r2}
+              x={0}
+              y={0}
+              width={w * 0.5}
+              height={h * 0.5}
+              fill={BACKGROUND_COLOR}
+            />
+            <animated.rect
+              transform={r3}
+              x={0}
+              y={0}
+              width={w * 0.5}
+              height={h * 0.5}
+              fill={BACKGROUND_COLOR}
+            />
+            <animated.rect
+              transform={r4}
+              x={0}
+              y={0}
+              width={w * 0.5}
+              height={h * 0.5}
+              fill={BACKGROUND_COLOR}
+            />
+          </svg>
+        </animated.div>
+        <Text>{text}</Text>
+      </Wrapper>
+    </Container>
   )
-}
+});
 
-function Scroll() {
+export const Scroll = forwardRef((props, ref) => {
   const [w, h] = [100, 100];
 
   const { ly2, arrow } = useSpring({
@@ -155,30 +177,35 @@ function Scroll() {
   });
 
   return (
-    <div>
-      <svg width={w} height={h}>
-        <animated.line
-          stroke="white"
-          strokeWidth={5}
-          x1={w * 0.5}
-          y1={h * 0.3}
-          x2={w * 0.5}
-          y2={ly2}
-        />
-        <animated.g transform={arrow}>
-          <animated.path
-            stroke="white"
-            fill="none"
-            strokeWidth={5}
-            d={`M ${w * 0.35},0 L${w * 0.5},${h * 0.13} L${w * 0.65},0`}
-          />
-        </animated.g>
-      </svg>
-    </div>
+    <Container ref={ref}>
+      <Wrapper>
+        <div>
+          <svg width={w} height={h}>
+            <animated.line
+              stroke="white"
+              strokeWidth={5}
+              x1={w * 0.5}
+              y1={h * 0.3}
+              x2={w * 0.5}
+              y2={ly2}
+            />
+            <animated.g transform={arrow}>
+              <animated.path
+                stroke="white"
+                fill="none"
+                strokeWidth={5}
+                d={`M ${w * 0.35},0 L${w * 0.5},${h * 0.13} L${w * 0.65},0`}
+              />
+            </animated.g>
+          </svg>
+        </div>
+        <Text>scroll to explore</Text>
+      </Wrapper>
+    </Container>
   );
-}
+});
 
-function Explore() {
+export const Explore = forwardRef((props, ref) => {
   const [w, h] = [100, 100];
   const cx = w * 0.5;
   const cy = h * 0.5;
@@ -204,47 +231,37 @@ function Explore() {
   });
 
   return (
-    <div>
-      <svg width={w} height={h}>
-        {trail.map(({ r, o }, index) => {
-          return (
-            <animated.circle
-              key={index}
-              cx={cx}
-              cy={cy}
-              opacity={o}
-              r={interpolate([r], (r) => {
-                const r1 = lerp(0, circles[index], r);
-                return clamp(r1, 0, 45);
-              })}
-              fill="none"
-              stroke="white"
-              strokeWidth={5}
-            />
-          )
-        })}
-      </svg>
-    </div>
+    <Container ref={ref}>
+      <Wrapper>
+        <div>
+          <svg width={w} height={h}>
+            {trail.map(({ r, o }, index) => {
+              return (
+                <animated.circle
+                  key={index}
+                  cx={cx}
+                  cy={cy}
+                  opacity={o}
+                  r={interpolate([r], (r) => {
+                    const r1 = lerp(0, circles[index], r);
+                    return clamp(r1, 0, 45);
+                  })}
+                  fill="none"
+                  stroke="white"
+                  strokeWidth={5}
+                />
+              )
+            })}
+          </svg>
+        </div>
+        <Text>click map to open</Text>
+      </Wrapper>
+    </Container>
   )
-}
+})
 
-function Tooltip({ type }) {
-  return (
-    <Wrapper>
-      {type === "scroll" && <>
-        <Scroll />
-        <Text>scroll to explore</Text>
-      </>}
-      {type === "close" && <>
-        <Exit />
-        <Text>click map to close</Text>
-      </>}
-      {type === "explore" && <>
-        <Explore />
-        <Text>click map to explore</Text>
-      </>}
-    </Wrapper>
-  )
+export default {
+  Explore,
+  Scroll,
+  Close,
 };
-
-export default Tooltip;

@@ -7,10 +7,9 @@ import { pick, insideSphere } from 'canvas-sketch-util/random';
 import { mapRange } from 'canvas-sketch-util/math';
 import { chunk } from 'lodash-es';
 import { createCanvas } from './utlis';
-import { PIXEL_RATIO, SCROLL_VIEW_HEIGHT, SCROLL_VIEW_WIDTH, WIDTH, COLORS, COLOR } from './constants';
+import { PIXEL_RATIO, SCROLL_VIEW_HEIGHT, SCROLL_VIEW_WIDTH, WIDTH, COLORS } from './constants';
 import { maps as mapsData } from './maps/index.js';
 import provinsiBahasa from './data/provinsi-bahasa.json';
-import { Explore } from './Tooltip';
 
 const totalBahasa = provinsiBahasa.reduce((prev, curr) => {
   const key = curr.provinsi.toLowerCase().split(" ").join("-");
@@ -225,8 +224,8 @@ function Gallery({ top, left, setScroll, setLocation, setTooltip, tooltipRef }) 
         set({
           y: 0,
         });
-        setTooltip(false);
         setScroll(xScroll, 0);
+        setTooltip(false);
 
         activeRef.current = false;
         setLocation(key);
@@ -278,7 +277,6 @@ function Gallery({ top, left, setScroll, setLocation, setTooltip, tooltipRef }) 
           )
         })}
       </a.group>
-      <Explore ref={tooltipRef} />
     </>
   )
 }

@@ -1,13 +1,12 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useSpring, a, interpolate, config, useTransition } from 'react-spring/three';
 import { mapRange, } from 'canvas-sketch-util/math';
 import { insideCircle, pick } from 'canvas-sketch-util/random';
 import maps from './maps/index';
 import { SCROLL_VIEW_HEIGHT } from './constants';
 import Maps from './Maps';
-import { Close } from './Tooltip';
 
-function Province({ top, setTop, name, setCity, tooltipRef, close }) {
+function Province({ top, setTop, name, setCity, setProvinceTooltip, setBahasaTooltip }) {
   const map = maps[name];
   const object = map.objects[name];
 
@@ -17,7 +16,7 @@ function Province({ top, setTop, name, setCity, tooltipRef, close }) {
 
   const [geometries, positions] = useMemo(() => {
     const positions = object.geometries.map((d, i) => {
-      const { properties: { kabkot: name }, id: key } = d;
+      const { properties: { kabkot: name }, id } = d;
       let [x, y] = insideCircle(6);
       const z = (i + 1) * -v;
 
@@ -30,8 +29,8 @@ function Province({ top, setTop, name, setCity, tooltipRef, close }) {
       const [x1, y1, z1] = pick([toTop, toRight, toBottom, toLeft]);
 
       return {
+        id,
         name,
-        key,
         from: {
           position: [x, y, z]
         },
@@ -58,9 +57,9 @@ function Province({ top, setTop, name, setCity, tooltipRef, close }) {
   const mapTransitions = useTransition(
     active !== null ?
       positions
-        .filter(p => p.name === active.name)
+        .filter(p => p.id === active)
       : positions,
-    p => p.key,
+    p => p.id,
     {
       unique: true,
       from: ({ from }) => ({ ...from, position: [0, 0, from.position[2]] }),
@@ -76,26 +75,37 @@ function Province({ top, setTop, name, setCity, tooltipRef, close }) {
     config: config.stiff,
   }))
 
-  const onClick = useCallback((name, position) => {
+  const onClick = useCallback((item) => {
     return () => {
+      const { id, name, from: { position } } = item;
       const [x, y, z] = position;
       const st = mapRange(-z + 3, 0, maxZoom, 0, SCROLL_VIEW_HEIGHT);
 
       if (active == null) {
-        setActive({ name });
+        setActive(id);
         setXY({ xy: [-x, -y] });
 
         setTop(st, true);
         setCity(name);
+
+        setBahasaTooltip(true);
+        setProvinceTooltip(false);
       } else {
         setActive(null);
         setXY({ xy: [0, 0] });
 
         setTop(st, false);
         setCity(null);
+
+        setBahasaTooltip(false);
+        setProvinceTooltip(true);
       }
     }
-  }, [active, maxZoom, setTop, setXY, setCity]);
+  }, [active, maxZoom, setTop, setXY, setCity, setProvinceTooltip, setBahasaTooltip]);
+
+  useEffect(() => {
+    setProvinceTooltip(true);
+  }, []);
 
   return (
     <group>
@@ -113,15 +123,11 @@ function Province({ top, setTop, name, setCity, tooltipRef, close }) {
               topology={map}
               geometry={geometries[item.name]}
               position={props.position}
-              onClick={onClick(item.name, item.from.position)}
+              onClick={onClick(item)}
             />
           );
         })}
       </a.group>
-      {/* <Close
-        ref={tooltipRef} text="click to close" onClick={() => {
-          close();
-        }} /> */}
     </group>
   );
 }

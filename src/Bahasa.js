@@ -171,8 +171,6 @@ function Bahasa({ top, province, city, scrollTooltipRef, closeTooltipRef, setToo
           </a.group>
         )
       })}
-      <Scroll ref={scrollTooltipRef} />
-      <Close ref={closeTooltipRef} text="click map to close" />
     </group>
   );
 }

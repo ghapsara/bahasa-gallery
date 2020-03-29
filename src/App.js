@@ -5,15 +5,17 @@ import { BACKGROUND_COLOR, SCROLL_HEIGHT, SCROLL_WIDTH, PIXEL_RATIO, SCROLL_VIEW
 import Gallery from './Gallery';
 import Province from './Province';
 import Bahasa from './Bahasa';
+import Tooltip from './Tooltip';
 
 function App() {
 	const scrollRef = useRef(null);
+	const galleryRef = useRef(false);
 	const galleryTooltipRef = useRef(null);
+	const bahasaRef = useRef(false);
 	const bahasaScrollTooltipRef = useRef(null);
 	const bahasaCloseTooltipRef = useRef(null);
+	const provinceRef = useRef(false);
 	const provinceTooltipRef = useRef(null);
-
-	const tooltipVisiblityRef = useRef(false);
 
 	const [active, setActive] = useState(null);
 
@@ -35,41 +37,47 @@ function App() {
 		});
 
 		if (galleryTooltipRef.current) {
-			if (tooltipVisiblityRef.current) {
-				galleryTooltipRef.current.style.display = "";
+			if (galleryRef.current) {
+				galleryTooltipRef.current.style.display = "table";
 			}
-			if (!tooltipVisiblityRef.current) {
+			if (!galleryRef.current) {
 				galleryTooltipRef.current.style.display = "none";
 			}
-			tooltipVisiblityRef.current = false;
+			galleryRef.current = false;
 		}
 
-		if (bahasaScrollTooltipRef.current) {
+		if (provinceRef.current) {
 			if (top < SCROLL_TOP) {
-				bahasaScrollTooltipRef.current.style.display = "";
+				provinceTooltipRef.current.style.display = "table";
+			}
+			if (top >= SCROLL_TOP && top <= SCROLL_VIEW_HEIGHT) {
+				provinceTooltipRef.current.style.display = "none";
+			}
+			if (top >= SCROLL_VIEW_HEIGHT) {
+				provinceTooltipRef.current.style.display = "table";
+			}
+		}
+
+		if (bahasaRef.current) {
+			if (top < SCROLL_TOP) {
+				bahasaScrollTooltipRef.current.style.display = "table";
 			}
 			if (top >= SCROLL_TOP) {
 				bahasaScrollTooltipRef.current.style.display = "none";
 			}
-		}
 
-		if (bahasaCloseTooltipRef.current) {
 			if (top < SCROLL_VIEW_HEIGHT) {
 				bahasaCloseTooltipRef.current.style.display = "none";
 			}
 			if (top >= SCROLL_VIEW_HEIGHT) {
-				bahasaCloseTooltipRef.current.style.display = "";
+				bahasaCloseTooltipRef.current.style.display = "table";
 			}
 		}
 
-		// if (provinceTooltipRef.current && city === null) {
-		// 	if (top < SCROLL_TOP) {
-		// 		provinceTooltipRef.current.style.display = "";
-		// 	}
-		// 	if (top >= SCROLL_TOP) {
-		// 		provinceTooltipRef.current.style.display = "none";
-		// 	}
-		// }
+		if (!bahasaRef.current) {
+			bahasaScrollTooltipRef.current.style.display = "none";
+			bahasaCloseTooltipRef.current.style.display = "none";
+		}
 	}, [set, active]);
 
 	const setScroll = useCallback((l, t) => {
@@ -77,15 +85,23 @@ function App() {
 	}, []);
 
 	const setGalleryTooltip = (isVisible) => {
-		tooltipVisiblityRef.current = isVisible;
+		galleryRef.current = isVisible;
 
-		const display = isVisible ? "" : "none";
-
+		const display = isVisible ? "table" : "none";
 		galleryTooltipRef.current.style.display = display;
 	};
 
+	const setProvinceTooltip = (isVisible) => {
+		provinceRef.current = isVisible;
+
+		const display = isVisible ? "table" : "none";
+		provinceTooltipRef.current.style.display = display;
+	};
+
 	const setBahasaTooltip = (type, isVisible) => {
-		const display = isVisible ? "" : "none";
+		bahasaRef.current = isVisible;
+
+		const display = isVisible ? "table" : "none";
 		if (type === "scroll") {
 			bahasaScrollTooltipRef.current.style.display = display;
 		}
@@ -100,6 +116,13 @@ function App() {
 		setActive(isActive ? position : null);
 		setScroll(0, isActive ? 0 : position);
 	}, [set, setScroll]);
+
+	const displayGallery = useCallback(() => {
+		setProvinceTooltip(false);
+		setScroll(0, 0);
+		setProvince(null);
+		setCity(null);
+	}, []);
 
 	return (
 		<div style={{
@@ -158,10 +181,17 @@ function App() {
 										setTop={setTop}
 										name={province}
 										setCity={setCity}
-										tooltipRef={provinceTooltipRef}
-										close={() => console.log('ss')}
+										setProvinceTooltip={setProvinceTooltip}
+										setBahasaTooltip={setBahasaTooltip}
 									/>
 								</>}
+							<Tooltip
+								bahasaCloseTooltipRef={bahasaCloseTooltipRef}
+								bahasaScrollTooltipRef={bahasaScrollTooltipRef}
+								galleryTooltipRef={galleryTooltipRef}
+								provinceTooltipRef={provinceTooltipRef}
+								displayGallery={displayGallery}
+							/>
 						</Canvas>
 					</div>
 				</div>

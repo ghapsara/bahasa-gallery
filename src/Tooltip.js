@@ -3,7 +3,7 @@ import { animated, useSpring, config, useTrail, interpolate } from 'react-spring
 import { Dom, useThree } from 'react-three-fiber';
 import { lerp, clamp } from 'canvas-sketch-util/math';
 import styled from 'styled-components';
-import { BACKGROUND_COLOR } from './constants';
+import { BACKGROUND_COLOR, COLOR } from './constants';
 
 const Container = styled.div`
   width: 100vw;
@@ -32,7 +32,7 @@ const Wrapper = styled.div`
 `;
 
 const Text = styled.div`
-  color: white;
+  color: ${COLOR};
   font-size: 18px;
   cursor: pointer;
 `;
@@ -120,7 +120,7 @@ function Close() {
         >
           <svg width={w} height={h}>
             <line
-              stroke="white"
+              stroke={COLOR}
               strokeWidth={5}
               x1={w * 0.2}
               y1={h * 0.2}
@@ -128,7 +128,7 @@ function Close() {
               y2={h * 0.8}
             />
             <line
-              stroke="white"
+              stroke={COLOR}
               strokeWidth={5}
               x1={w * 0.8}
               y1={h * 0.2}
@@ -200,7 +200,7 @@ function Scroll() {
       <div>
         <svg width={w} height={h}>
           <animated.line
-            stroke="white"
+            stroke={COLOR}
             strokeWidth={5}
             x1={w * 0.5}
             y1={h * 0.3}
@@ -209,7 +209,7 @@ function Scroll() {
           />
           <animated.g transform={arrow}>
             <animated.path
-              stroke="white"
+              stroke={COLOR}
               fill="none"
               strokeWidth={5}
               d={`M ${w * 0.35},0 L${w * 0.5},${h * 0.13} L${w * 0.65},0`}
@@ -263,7 +263,7 @@ function Explore() {
                   return clamp(r1, 0, 45);
                 })}
                 fill="none"
-                stroke="white"
+                stroke={COLOR}
                 strokeWidth={5}
               />
             )
@@ -346,14 +346,14 @@ function Back({ onClick }) {
         <svg width={w} height={h}>
           <animated.g transform={g}>
             <animated.line
-              stroke="white"
+              stroke={COLOR}
               strokeWidth={5}
               strokeLinecap="round"
               {...topLine}
               y1={y1}
             />
             <animated.line
-              stroke="white"
+              stroke={COLOR}
               strokeWidth={5}
               strokeLinecap="round"
               {...bottomLine}
@@ -362,7 +362,7 @@ function Back({ onClick }) {
           </animated.g>
         </svg>
       </div>
-      <Text onClick={onClick}>Back</Text>
+      <Text onClick={onClick}>back to gallery</Text>
     </Wrapper>
   );
 }

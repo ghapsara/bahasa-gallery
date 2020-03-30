@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useCallback } from 'react'
+import React, { useMemo, useRef, useCallback, useEffect } from 'react'
 import { geoMercator, geoPath } from 'd3';
 import { feature } from 'topojson-client';
 import { useThree, useFrame } from 'react-three-fiber';
@@ -158,51 +158,48 @@ function Text({ position }) {
   )
 }
 
-function Gallery({ top, left, setScroll, setLocation, setTooltip, tooltipRef }) {
-  const e = Object.keys(mapsData);
-  const m = chunk(e, 6);
+const e = Object.keys(mapsData);
+const m = chunk(e, 6);
 
-  const w = 20;
-  const w0 = -w;
-  const w1 = w;
+const w = 20;
+const w0 = -w;
+const w1 = w;
 
-  const sphereRadius = 3;
+const sphereRadius = 3;
 
-  const [maps, order] = useMemo(() => {
-    const maps = m.map((d, i) => {
-      const x = mapRange(i, 0, m.length - 1, w0 + 5, w1 - 5);
+const maps = m.map((d, i) => {
+  const x = mapRange(i, 0, m.length - 1, w0 + 5, w1 - 5);
 
-      const child = d.map((key) => {
-        const r = insideSphere(sphereRadius);
+  const child = d.map((key) => {
+    const r = insideSphere(sphereRadius);
 
-        return [...r, key];
-      });
+    return [...r, key];
+  });
 
-      return {
-        parent: [x, 0, 0],
-        child,
-      }
-    });
+  return {
+    parent: [x, 0, 0],
+    child,
+  }
+});
 
-    const order = maps.reduce((prev, curr) =>
-      [
-        ...prev,
-        ...curr.child.map(c => ({
-          key: c[3],
-          value: c[2],
-        }))
-      ],
-      []
-    )
-      .sort((a, b) => a.value - b.value)
-      .reduce((prev, curr) => ({
-        ...prev,
-        [curr.key]: curr.value,
-      }), {});
+const order = maps.reduce((prev, curr) =>
+  [
+    ...prev,
+    ...curr.child.map(c => ({
+      key: c[3],
+      value: c[2],
+    }))
+  ],
+  []
+)
+  .sort((a, b) => a.value - b.value)
+  .reduce((prev, curr) => ({
+    ...prev,
+    [curr.key]: curr.value,
+  }), {});
 
-    return [maps, order];
-  }, [m, w0, w1]);
 
+function Gallery({ top, left, setScroll, setLocation, setTooltip, setGalleryPosition, galleryPositionY }) {
   const positionRef = useRef(null);
   const activeRef = useRef(false);
 
@@ -219,11 +216,16 @@ function Gallery({ top, left, setScroll, setLocation, setTooltip, tooltipRef }) 
 
       const zScroll = mapRange((z - 3.7) * -1, 0, 7, 0, SCROLL_VIEW_HEIGHT);
       const xScroll = mapRange(p[0] + x, w0, w1, 0, SCROLL_VIEW_WIDTH);
+      y = y * -1;
 
       if (positionRef.current === position && activeRef.current) {
         set({
           y: 0,
         });
+
+        setGalleryPosition([xScroll, zScroll]);
+        galleryPositionY.current = y;
+
         setScroll(xScroll, 0);
         setTooltip(false);
 
@@ -233,14 +235,23 @@ function Gallery({ top, left, setScroll, setLocation, setTooltip, tooltipRef }) 
         setTooltip(true);
         setScroll(xScroll, zScroll);
 
-        y = y * -1;
         set({ y });
         activeRef.current = true;
       }
 
       positionRef.current = position;
     }
-  }, [w0, w1, set, setScroll, setLocation, setTooltip]);
+  }, [set, setScroll, setLocation, setTooltip, setGalleryPosition]);
+
+  useEffect(() => {
+    if (galleryPositionY.current !== null) {
+      set({
+        y: galleryPositionY.current
+      })
+
+      galleryPositionY.current = null;
+    }
+  }, [set])
 
   return (
     <>
@@ -277,6 +288,7 @@ function Gallery({ top, left, setScroll, setLocation, setTooltip, tooltipRef }) 
           )
         })}
       </a.group>
+      {/* controll center */}
     </>
   )
 }

@@ -21,6 +21,9 @@ function App() {
 
 	const [province, setProvince] = useState(null);
 	const [city, setCity] = useState(null);
+	const [galleryPosition, setGalleryPosition] = useState([0, 0]);
+	const galleryPositionY = useRef(null);
+
 
 	const [{ left, top, top1 }, set] = useSpring(() => ({
 		left: 0,
@@ -119,10 +122,12 @@ function App() {
 
 	const displayGallery = useCallback(() => {
 		setProvinceTooltip(false);
-		setScroll(0, 0);
 		setProvince(null);
 		setCity(null);
-	}, []);
+
+		const [l, t] = galleryPosition;
+		setScroll(l, t);
+	}, [galleryPosition]);
 
 	return (
 		<div style={{
@@ -162,6 +167,8 @@ function App() {
 									setLocation={setProvince}
 									setTooltip={setGalleryTooltip}
 									tooltipRef={galleryTooltipRef}
+									setGalleryPosition={setGalleryPosition}
+									galleryPositionY={galleryPositionY}
 								/>
 							}
 							{province !== null &&

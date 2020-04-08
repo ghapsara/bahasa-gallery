@@ -7,7 +7,7 @@ import { pick, insideSphere } from 'canvas-sketch-util/random';
 import { mapRange } from 'canvas-sketch-util/math';
 import { chunk } from 'lodash-es';
 import { createCanvas } from './utlis';
-import { PIXEL_RATIO, SCROLL_VIEW_HEIGHT, SCROLL_VIEW_WIDTH, WIDTH, COLORS } from './constants';
+import { PIXEL_RATIO, SCROLL_VIEW_HEIGHT, SCROLL_VIEW_WIDTH, WIDTH, COLORS, WIDTH_BY_PIXEL_RATIO, COLOR } from './constants';
 import { maps as mapsData } from './maps/index.js';
 import provinsiBahasa from './data/provinsi-bahasa.json';
 
@@ -158,6 +158,41 @@ function Text({ position }) {
   )
 }
 
+function Control({ onClick }) {
+  const { viewport: { width, height } } = useThree();
+  const s = 0.8;
+
+  const canvas = useMemo(() => {
+    const canvas = createCanvas(WIDTH, WIDTH);
+    const context = canvas.getContext('2d');
+
+    const w = WIDTH_BY_PIXEL_RATIO;
+
+    context.beginPath();
+    context.lineWidth = w * 0.05;
+    context.strokeStyle = COLOR;
+    context.arc(w * 0.5, w * 0.5, w * 0.3, 0, Math.PI * 2);
+    context.stroke();
+
+    context.beginPath();
+    context.lineWidth = w * 0.2;
+    context.strokeStyle = COLOR;
+    context.arc(w * 0.5, w * 0.5, w * 0.1, 0, Math.PI * 2);
+    context.stroke();
+
+    return canvas;
+  }, []);
+
+  return (
+    <mesh scale={[s, s, s]} position={[width * 0.46, height * -0.45, 0]} onClick={onClick}>
+      <meshBasicMaterial attach="material" transparent>
+        <canvasTexture attach="map" image={canvas} />
+      </meshBasicMaterial>
+      <planeBufferGeometry attach="geometry" args={[1, 1, 1]} />
+    </mesh>
+  )
+}
+
 const e = Object.keys(mapsData);
 const m = chunk(e, 6);
 
@@ -241,7 +276,23 @@ function Gallery({ top, left, setScroll, setLocation, setTooltip, setGalleryPosi
 
       positionRef.current = position;
     }
-  }, [set, setScroll, setLocation, setTooltip, setGalleryPosition]);
+  }, [set, setGalleryPosition, galleryPositionY, setScroll, setTooltip, setLocation]);
+
+  const zoomOut = useCallback(() => {
+    if (activeRef.current) {
+      const [p, c] = positionRef.current;
+
+      const xScroll = mapRange(p[0] + c[0], w0, w1, 0, SCROLL_VIEW_WIDTH);
+      setScroll(xScroll, 0);
+    }
+
+    set({
+      y: 0
+    });
+
+    setTooltip(false);
+    activeRef.current = false;
+  }, [set, setScroll, setTooltip]);
 
   useEffect(() => {
     if (galleryPositionY.current !== null) {
@@ -251,10 +302,10 @@ function Gallery({ top, left, setScroll, setLocation, setTooltip, setGalleryPosi
 
       galleryPositionY.current = null;
     }
-  }, [set])
+  }, [set]);
 
   return (
-    <>
+    <group>
       <a.group
         position={interpolate([left, top, y], (l, t, y) => {
           const x = mapRange(l, 0, SCROLL_VIEW_WIDTH, w1, w0);
@@ -288,8 +339,8 @@ function Gallery({ top, left, setScroll, setLocation, setTooltip, setGalleryPosi
           )
         })}
       </a.group>
-      {/* controll center */}
-    </>
+      <Control onClick={zoomOut} />
+    </group>
   )
 }
 

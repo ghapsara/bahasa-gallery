@@ -65,6 +65,8 @@ export const DOPE = [
 ]
 
 // export const COLOR = "#f95850";
-export const BACKGROUND_COLOR = '#423c4a';
-export const COLOR = "#f87c72";
-// export const BACKGROUND_COLOR = 'white';
+// export const BACKGROUND_COLOR = '#423c4a';
+// export const COLOR = "#f87c72";
+export const BACKGROUND_COLOR = 'white';
+// export const BACKGROUND_COLOR = "#f87c72";
+export const COLOR = "black";

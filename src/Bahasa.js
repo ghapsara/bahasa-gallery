@@ -7,29 +7,7 @@ import { shuffle, pick } from 'canvas-sketch-util/random';
 import * as THREE from 'three';
 import { createCanvas } from './utlis';
 import { PIXEL_RATIO, SCROLL_VIEW_HEIGHT, COLORS } from './constants';
-import provinsiBahasa from './data/provinsi-bahasa.json';
-import kabkotBahasa from './data/kabkot-bahasa.json';
-import { Scroll, Close } from './Tooltip';
-
-const cityBahasa = kabkotBahasa.reduce((prev, curr) => {
-  const key = curr.provinsi + "-" + curr.kabkot;
-  return {
-    ...prev,
-    [key]: curr.bahasa
-  }
-}, {});
-
-const provinceBahasa = provinsiBahasa.reduce((prev, curr) => {
-  return {
-    ...prev,
-    [curr.provinsi]: curr.bahasa,
-  }
-}, {});
-
-const bahasaAll = {
-  ...provinceBahasa,
-  ...cityBahasa,
-}
+import { bahasaAll } from './data';
 
 const FONT_SIZE = 500;
 const FONT = `bold ${FONT_SIZE}px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
@@ -114,7 +92,7 @@ function Text({ x, text, width, height, color }) {
   );
 }
 
-function Bahasa({ top, province, city, scrollTooltipRef, closeTooltipRef, setTooltip }) {
+function Bahasa({ top, province, city, setTooltip }) {
   const { viewport } = useThree();
 
   const texts = useMemo(() => {

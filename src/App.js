@@ -6,6 +6,7 @@ import Gallery from './Gallery';
 import Province from './Province';
 import Bahasa from './Bahasa';
 import Tooltip from './Tooltip';
+import Title from './Title';
 
 function App() {
 	const scrollRef = useRef(null);

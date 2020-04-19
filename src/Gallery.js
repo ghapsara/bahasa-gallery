@@ -1,33 +1,15 @@
 import React, { useMemo, useRef, useCallback, useEffect } from 'react'
 import { geoMercator, geoPath } from 'd3';
 import { feature } from 'topojson-client';
-import { useThree, useFrame } from 'react-three-fiber';
+import { useThree, useFrame, Dom } from 'react-three-fiber';
 import { a, useSpring, interpolate } from 'react-spring/three';
-import { pick, insideSphere } from 'canvas-sketch-util/random';
+import { pick } from 'canvas-sketch-util/random';
 import { mapRange } from 'canvas-sketch-util/math';
-import { chunk } from 'lodash-es';
 import { createCanvas } from './utlis';
-import { PIXEL_RATIO, SCROLL_VIEW_HEIGHT, SCROLL_VIEW_WIDTH, WIDTH, COLORS, WIDTH_BY_PIXEL_RATIO, COLOR } from './constants';
+import { PIXEL_RATIO, SCROLL_VIEW_HEIGHT, SCROLL_VIEW_WIDTH, WIDTH, WIDTH_BY_PIXEL_RATIO, COLOR } from './constants';
 import { maps as mapsData } from './maps/index.js';
-import provinsiBahasa from './data/provinsi-bahasa.json';
-
-const totalBahasa = provinsiBahasa.reduce((prev, curr) => {
-  const key = curr.provinsi.toLowerCase().split(" ").join("-");
-  return {
-    ...prev,
-    [key]: curr.total,
-  }
-}, {});
-
-// animate position & opacity
-function Paintholder({ position, color, ...props }) {
-  return (
-    <mesh position={position} {...props}>
-      <meshBasicMaterial attach="material" color={color} />
-      <planeBufferGeometry attach="geometry" args={[1, 1.4, 1]} />
-    </mesh>
-  );
-}
+import { maps, order, w0, w1, provinceBahasa, totalBahasa, totalBahasaPerProvince } from './data';
+import Title from './Title';
 
 function Painting({ maps, mapsKey, total, ...props }) {
   const canvas = useMemo(() => {
@@ -50,7 +32,7 @@ function Painting({ maps, mapsKey, total, ...props }) {
 
     const font = `bold 120px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
     context.font = font;
-    context.fillStyle = "black";
+    context.fillStyle = "white";
     context.fillText(mapsKey.toUpperCase().split("-").join(" "), w * 0.05, h * 0.925);
 
     const font1 = `100px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
@@ -78,8 +60,6 @@ function Painting({ maps, mapsKey, total, ...props }) {
     context.fillStyle = props.color;
     path(f);
     context.fill();
-
-    // context.fillRect(0, 0, w, w);
 
     return canvas;
   }, [maps, mapsKey, props.color]);
@@ -109,7 +89,6 @@ function Painting({ maps, mapsKey, total, ...props }) {
       <a.mesh
         renderOrder={props.order}
         ref={ref}
-        rotation={interpolate([x, y], (x, y) => [0, 0, 0])}
         position={interpolate([x, y], (x, y) => [x * 0.03 * dX, (y * -0.03 * dY) + 0.1, 0])}
       >
         <meshBasicMaterial attach="material" depthTest={false}>
@@ -121,40 +100,21 @@ function Painting({ maps, mapsKey, total, ...props }) {
   );
 }
 
-function Text({ position }) {
-  const { size } = useThree();
-  const { width, height } = size;
-
-  const canvas = useMemo(() => {
-    const canvas = createCanvas(width, height);
-    const context = canvas.getContext('2d');
-
-    const w = width * PIXEL_RATIO;
-    const h = height * PIXEL_RATIO;
-
-    const fontSize = 300;
-    const font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
-    context.font = font;
-    context.textAlign = 'left';
-    context.textBaseline = 'middle';
-    context.fillStyle = "#34363a";
-    context.fillText("Bahasa", 0, h * 0.4);
-    context.fillText("Gallery", 0, h * 0.6);
-
-    return canvas;
-  }, [width, height]);
-
-  const w = width / height;
-
-  const s = 7.5;
+function Text({ left }) {
+  const { viewport: { width: vw, height: vh } } = useThree();
 
   return (
-    <mesh scale={[s, s, s]} position={position}>
-      <meshBasicMaterial attach="material" transparent>
-        <canvasTexture attach="map" image={canvas} />
-      </meshBasicMaterial>
-      <planeBufferGeometry attach="geometry" args={[w, 1, 1]} />
-    </mesh>
+    <a.group
+      position={left.interpolate((l) => {
+        const x = mapRange(l, 0, WIDTH * 0.5, vw * -0.5, -vw);
+
+        return [x, vh * 0.5, 0];
+      })}
+    >
+      <Dom>
+        <Title />
+      </Dom>
+    </a.group>
   )
 }
 
@@ -192,47 +152,6 @@ function Control({ onClick }) {
     </mesh>
   )
 }
-
-const e = Object.keys(mapsData);
-const m = chunk(e, 6);
-
-const w = 20;
-const w0 = -w;
-const w1 = w;
-
-const sphereRadius = 3;
-
-const maps = m.map((d, i) => {
-  const x = mapRange(i, 0, m.length - 1, w0 + 5, w1 - 5);
-
-  const child = d.map((key) => {
-    const r = insideSphere(sphereRadius);
-
-    return [...r, key];
-  });
-
-  return {
-    parent: [x, 0, 0],
-    child,
-  }
-});
-
-const order = maps.reduce((prev, curr) =>
-  [
-    ...prev,
-    ...curr.child.map(c => ({
-      key: c[3],
-      value: c[2],
-    }))
-  ],
-  []
-)
-  .sort((a, b) => a.value - b.value)
-  .reduce((prev, curr) => ({
-    ...prev,
-    [curr.key]: curr.value,
-  }), {});
-
 
 function Gallery({ top, left, setScroll, setLocation, setTooltip, setGalleryPosition, galleryPositionY }) {
   const positionRef = useRef(null);
@@ -306,6 +225,7 @@ function Gallery({ top, left, setScroll, setLocation, setTooltip, setGalleryPosi
 
   return (
     <group>
+      <Text left={left} />
       <a.group
         position={interpolate([left, top, y], (l, t, y) => {
           const x = mapRange(l, 0, SCROLL_VIEW_WIDTH, w1, w0);
@@ -318,15 +238,14 @@ function Gallery({ top, left, setScroll, setLocation, setTooltip, setGalleryPosi
           return (
             <group key={i} position={d.parent}>
               {d.child.map((c, j) => {
-                const [x, y, z, mapsKey] = c;
-                const colorIndex = (i * 6) + j;
+                const [x, y, z, mapsKey, color] = c;
 
                 return (
                   <Painting
                     key={mapsKey}
                     position={[x, y, z]}
                     onClick={onClick([d.parent, c])}
-                    color={COLORS[colorIndex]}
+                    color={color}
                     maps={mapsData[mapsKey]}
                     mapsKey={mapsKey}
                     order={order[mapsKey]}

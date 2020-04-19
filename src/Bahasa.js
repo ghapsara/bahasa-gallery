@@ -124,7 +124,7 @@ function Bahasa({ top, province, city, setTooltip }) {
 
   useEffect(() => {
     setTooltip("scroll", true);
-  }, []);
+  }, [setTooltip]);
 
   return (
     <group>

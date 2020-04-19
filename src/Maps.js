@@ -70,7 +70,7 @@ function Maps({ topology, geometry, position, name, color, total, onClick }) {
     context.fill();
 
     return new CanvasTexture(canvas);
-  }, [COLOR_1, geometry, topology]);
+  }, [COLOR_2, geometry, topology]);
 
   const mapMask = useMemo(() => {
     const H = WIDTH * sizeH;
@@ -100,7 +100,7 @@ function Maps({ topology, geometry, position, name, color, total, onClick }) {
     context.fill();
 
     return new CanvasTexture(canvas);
-  }, [COLOR_1, geometry, topology]);
+  }, [COLOR_2, geometry, topology]);
 
 
   const textTexture = useMemo(() => {

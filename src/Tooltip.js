@@ -58,7 +58,7 @@ function Close() {
       openRect,
       closeRect
     }
-  }, []);
+  }, [h, w]);
 
   const [state, setState] = useState(0);
 

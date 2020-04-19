@@ -1,55 +1,17 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { useThree } from 'react-three-fiber';
 import { useSpring, a, interpolate, config, useTransition } from 'react-spring/three';
 import { mapRange, } from 'canvas-sketch-util/math';
 import { insideCircle, pick } from 'canvas-sketch-util/random';
 import maps from './maps/index';
-import { SCROLL_VIEW_HEIGHT, WIDTH_BY_PIXEL_RATIO, HEIGHT, HEIGHT_BY_PIXEL_RATIO, PIXEL_RATIO, COLOR } from './constants';
+import { SCROLL_VIEW_HEIGHT } from './constants';
 import Maps from './Maps';
 import { mapsColor, bahasaAll } from './data';
-import { createCanvas } from './utlis';
 
 function lookUpBahasa(province, city) {
   const p = province.split("-").map(d => d[0].toUpperCase() + d.slice(1)).join(' ');
   const location = `${p}-${city}`;
 
   return bahasaAll[location] != null ? bahasaAll[location].length : 0;
-}
-
-function Text() {
-  const { size, viewport } = useThree();
-  const { width, height } = size;
-
-  const canvas = useMemo(() => {
-    const canvas = createCanvas(width, height);
-    const context = canvas.getContext('2d');
-
-    const w = width * PIXEL_RATIO;
-    const h = height * PIXEL_RATIO;
-
-    const fontSize = 400;
-    const font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif`;
-    context.font = font;
-    context.textAlign = 'left';
-    context.textBaseline = "bottom";
-    context.fillStyle = "black";
-    context.fillText("5", 0, h);
-
-    return canvas;
-  }, [width, height]);
-
-  const s = viewport.height;
-  const ww = (width / height) * s;
-
-  return (
-    <mesh scale={[1, 1, 1]}>
-      <meshBasicMaterial attach="material" transparent opacity={0.5}>
-        <canvasTexture attach="map" image={canvas} />
-      </meshBasicMaterial>
-      {/* <meshBasicMaterial attach="material" color="tomato" /> */}
-      <planeBufferGeometry attach="geometry" args={[ww, s, 1]} />
-    </mesh>
-  )
 }
 
 function Province({ top, setTop, name, setCity, setProvinceTooltip, setBahasaTooltip }) {
@@ -101,7 +63,7 @@ function Province({ top, setTop, name, setCity, setProvinceTooltip, setBahasaToo
     }, {});
 
     return [geometries, positions];
-  }, [maxZoom, object]);
+  }, [maxZoom, name, object.geometries]);
 
   const [active, setActive] = useState(null);
 
@@ -156,7 +118,7 @@ function Province({ top, setTop, name, setCity, setProvinceTooltip, setBahasaToo
 
   useEffect(() => {
     setProvinceTooltip(true);
-  }, []);
+  }, [setProvinceTooltip]);
 
   return (
     <group>

@@ -6,7 +6,6 @@ import Gallery from './Gallery';
 import Province from './Province';
 import Bahasa from './Bahasa';
 import Tooltip from './Tooltip';
-import Title from './Title';
 
 function App() {
 	const scrollRef = useRef(null);
@@ -24,7 +23,6 @@ function App() {
 	const [city, setCity] = useState(null);
 	const [galleryPosition, setGalleryPosition] = useState([0, 0]);
 	const galleryPositionY = useRef(null);
-
 
 	const [{ left, top, top1 }, set] = useSpring(() => ({
 		left: 0,
@@ -128,7 +126,7 @@ function App() {
 
 		const [l, t] = galleryPosition;
 		setScroll(l, t);
-	}, [galleryPosition]);
+	}, [galleryPosition, setScroll]);
 
 	return (
 		<div style={{
@@ -155,7 +153,7 @@ function App() {
 						backgroundColor: BACKGROUND_COLOR
 					}}>
 						<Canvas
-							// pixelRatio={PIXEL_RATIO}
+							pixelRatio={PIXEL_RATIO}
 							style={{
 								backgroundColor: BACKGROUND_COLOR
 							}}

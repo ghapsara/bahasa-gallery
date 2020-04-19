@@ -8,7 +8,7 @@ import { mapRange } from 'canvas-sketch-util/math';
 import { createCanvas } from './utlis';
 import { PIXEL_RATIO, SCROLL_VIEW_HEIGHT, SCROLL_VIEW_WIDTH, WIDTH, WIDTH_BY_PIXEL_RATIO, COLOR } from './constants';
 import { maps as mapsData } from './maps/index.js';
-import { maps, order, w0, w1, provinceBahasa, totalBahasa, totalBahasaPerProvince } from './data';
+import { maps, order, w0, w1, totalBahasa } from './data';
 import Title from './Title';
 
 function Painting({ maps, mapsKey, total, ...props }) {
@@ -221,7 +221,7 @@ function Gallery({ top, left, setScroll, setLocation, setTooltip, setGalleryPosi
 
       galleryPositionY.current = null;
     }
-  }, [set]);
+  }, [galleryPositionY, set]);
 
   return (
     <group>
